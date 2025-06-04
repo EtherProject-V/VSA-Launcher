@@ -97,8 +97,8 @@ namespace VSA_launcher
                     description.AppendLine($"World: {metadata["WorldName"]}");
                 if (metadata.ContainsKey("WorldID"))
                     description.AppendLine($"ID: {metadata["WorldID"]}");
-                if (metadata.ContainsKey("Username"))
-                    description.AppendLine($"User: {metadata["Username"]}"); // ↑このメタデータキーは互換性のために残しておく
+                if (metadata.ContainsKey("User"))
+                    description.AppendLine($"User: {metadata["User"]}");
                 if (metadata.ContainsKey("CaptureTime"))
                     description.AppendLine($"Time: {metadata["CaptureTime"]}");
                 

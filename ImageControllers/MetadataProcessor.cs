@@ -38,10 +38,8 @@ namespace VSA_launcher
                 }
                 
                 // ログパーサーから最新情報を取得
-                _logParser.ParseLatestLog();
-
-                // ユーザー名（撮影者）の情報を確保
-                string username = "Unknown User";
+                _logParser.ParseLatestLog();                // ユーザー名（撮影者）の情報を確保
+                string username = _logParser.Username ?? "Unknown User";
 
                 // メタデータの作成
                 var metadata = new Dictionary<string, string>
