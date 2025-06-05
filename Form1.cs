@@ -42,9 +42,7 @@ namespace VSA_launcher
                 _statusUpdateTimer = new System.Windows.Forms.Timer();
                 _statusUpdateTimer.Interval = 3000; // 3秒ごとに更新
                 _statusUpdateTimer.Tick += StatusUpdateTimer_Tick;
-                _statusUpdateTimer.Start();
-
-                launchMainApp_button.Click += (s, e) => LaunchMainApplication();
+                _statusUpdateTimer.Start();                launchMainApp_button.Click += (s, e) => LaunchMainApplication();
                 metadataEnabled_checkBox.CheckedChanged += metadataEnabled_CheckedChanged;
                 monthCompression_checkBox.CheckedChanged += monthCompression_CheckedChanged;
                 monthRadio_Button.CheckedChanged += radioButton_CheckedChanged;
@@ -98,11 +96,12 @@ namespace VSA_launcher
                 // 画像プロセッサを初期化
                 _folderManager = new FolderStructureManager(_settings);
                 _fileNameGenerator = new FileNameGenerator(_settings);
-                _imageProcessor = new ImageProcessor(_settings, _logParser, _fileWatcher, UpdateStatusInfo);
-
-                // スタートアップ設定を適用
+                _imageProcessor = new ImageProcessor(_settings, _logParser, _fileWatcher, UpdateStatusInfo);                // スタートアップ設定を適用
                 _startWithWindows = _settings.LauncherSettings.StartWithWindows;
                 startup_checkBox.Checked = _startWithWindows;
+
+                // フロント設定を初期化
+                InitializeFrontSettings();
 
                 // スタートアップの実際の状態を反映
                 
@@ -1200,11 +1199,66 @@ namespace VSA_launcher
         {
             // メインアプリケーションの状態を監視するコード
             // 現在は実装されていないようです
-        }
-
-        public void Dispose()
+        }        public void Dispose()
         {
             // NotifyIconはフォームが所有しているので、ここでは何もしない
+        }
+
+        // フロント設定の初期化
+        private void InitializeFrontSettings()
+        {
+            // チェックボックスの初期値を設定
+            useConfigOutputPath_checkBox.Checked = _settings.FrontSettings.UseConfiguredOutputPath;
+            
+            // イベントハンドラを登録
+            useConfigOutputPath_checkBox.CheckedChanged += useConfigOutputPath_CheckedChanged;
+            
+            // 設定ファイルのoutputPathを使用する場合
+            if (useConfigOutputPath_checkBox.Checked && !string.IsNullOrEmpty(_settings.OutputPath))
+            {
+                outPut_textBox.Text = _settings.OutputPath;
+            }
+            
+            // チェックボックスの状態に応じてテキストボックスの有効/無効を切り替え
+            UpdateOutputPathTextBoxState();
+        }
+
+        // チェックボックスの変更イベントハンドラ
+        private void useConfigOutputPath_CheckedChanged(object? sender, EventArgs e)
+        {
+            if (useConfigOutputPath_checkBox.Checked)
+            {
+                // 設定ファイルのoutputPathを読み込む
+                if (!string.IsNullOrEmpty(_settings.OutputPath))
+                {
+                    outPut_textBox.Text = _settings.OutputPath;
+                }
+            }
+            
+            UpdateOutputPathTextBoxState();
+            SaveFrontSettings();
+        }
+
+        // 出力パステキストボックスの状態を更新
+        private void UpdateOutputPathTextBoxState()
+        {
+            // チェックボックスがチェックされている場合、テキストボックスを読み取り専用にする
+            outPut_textBox.ReadOnly = useConfigOutputPath_checkBox.Checked;
+            outPut_button.Enabled = !useConfigOutputPath_checkBox.Checked;
+        }
+
+        // フロント設定の保存
+        private void SaveFrontSettings()
+        {
+            try
+            {
+                _settings.FrontSettings.UseConfiguredOutputPath = useConfigOutputPath_checkBox.Checked;
+                SettingsManager.SaveSettings(_settings);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"フロント設定の保存に失敗しました: {ex.Message}", "エラー", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
         }
     }
 }
