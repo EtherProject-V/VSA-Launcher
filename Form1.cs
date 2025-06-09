@@ -159,7 +159,7 @@ namespace VSA_launcher
         }
 
         // コンボボックス変更イベントハンドラ
-        private void FileRename_ComboBox_SelectedIndexChanged(object sender, EventArgs e)
+        private void FileRename_ComboBox_SelectedIndexChanged(object? sender, EventArgs e)
         {
             // 選択されたインデックスに基づいて設定を更新
             int selectedIndex = fileRename_comboBox.SelectedIndex;
@@ -291,20 +291,20 @@ namespace VSA_launcher
             }
         }
 
-        private void metadataEnabled_CheckedChanged(object sender, EventArgs e)
+        private void metadataEnabled_CheckedChanged(object? sender, EventArgs e)
         {
             _settings.Metadata.Enabled = metadataEnabled_checkBox.Checked;
             SettingsManager.SaveSettings(_settings);
         }
 
-        private void checkBox3_CheckedChanged(object sender, EventArgs e)
+        private void checkBox3_CheckedChanged(object? sender, EventArgs e)
         {
             fileSubdivision_Group.Enabled = fileSubdivision_checkBox.Checked;
             _settings.FolderStructure.Enabled = fileSubdivision_checkBox.Checked;
             SettingsManager.SaveSettings(_settings);
         }
 
-        private void monthCompression_CheckedChanged(object sender, EventArgs e)
+        private void monthCompression_CheckedChanged(object? sender, EventArgs e)
         {
             _settings.Compression.AutoCompress = monthCompression_checkBox.Checked;
             SettingsManager.SaveSettings(_settings);
@@ -360,7 +360,7 @@ namespace VSA_launcher
                 Directory.CreateDirectory(appDataPath);
                 
                 // フロントエンドのパスを探す
-                string frontendPath = FindFrontendPath();
+                string? frontendPath = FindFrontendPath();
                 if (string.IsNullOrEmpty(frontendPath))
                 {
                     MessageBox.Show(
@@ -372,7 +372,7 @@ namespace VSA_launcher
                 }
 
                 // Electronを探す
-                string electronPath = FindElectronPath(frontendPath);
+                string? electronPath = FindElectronPath(frontendPath);
                 if (string.IsNullOrEmpty(electronPath))
                 {
                     MessageBox.Show(
@@ -406,7 +406,7 @@ namespace VSA_launcher
                         UpdateStatusInfo("ビルド中", "Reactアプリをビルドしています...");
                         
                         var reactBuildProcess = Process.Start(reactBuildInfo);
-                        reactBuildProcess.WaitForExit();
+                        reactBuildProcess?.WaitForExit();
                         
                         // 次にElectronビルド
                         ProcessStartInfo electronBuildInfo = new ProcessStartInfo
@@ -421,7 +421,7 @@ namespace VSA_launcher
                         UpdateStatusInfo("ビルド中", "Electronアプリをビルドしています...");
                         
                         var buildProcess = Process.Start(electronBuildInfo);
-                        buildProcess.WaitForExit();
+                        buildProcess?.WaitForExit();
                         
                         UpdateStatusInfo("ビルド完了", "アプリケーションのビルドが完了しました");
                         
@@ -496,7 +496,7 @@ namespace VSA_launcher
         }
 
         // Electronのパスを探す関数
-        private string FindElectronPath(string frontendPath)
+        private string? FindElectronPath(string frontendPath)
         {
             // パッケージ同梱のElectronを最初に確認
             string packagedElectronPath = Path.Combine(
@@ -536,7 +536,7 @@ namespace VSA_launcher
             return null;
         }
 
-        private string FindFrontendPath()
+        private string? FindFrontendPath()
         {
             // パッケージ同梱のフロントエンドを最初に確認
             string packagedFrontendPath = Path.Combine(
@@ -867,22 +867,22 @@ namespace VSA_launcher
             photographName_textBox.Text = string.Empty;
 
             // メタデータを表示
-            if (metadata.TryGetValue("WorldName", out string worldName))
+            if (metadata.TryGetValue("WorldName", out string? worldName))
             {
                 worldName_richTextBox.Text = worldName;
             }
 
-            if (metadata.TryGetValue("Usernames", out string usernames)) // 'Friends'を'Usernames'に変更
+            if (metadata.TryGetValue("Usernames", out string? usernames)) // 'Friends'を'Usernames'に変更
             {
                 worldFriends_richTextBox.Text = usernames;
             }
 
-            if (metadata.TryGetValue("CaptureTime", out string captureTime))
+            if (metadata.TryGetValue("CaptureTime", out string? captureTime))
             {
                 photoTime_textBox.Text = captureTime;
             }
 
-            if (metadata.TryGetValue("User", out string user)) // 'Username'を'User'に変更
+            if (metadata.TryGetValue("User", out string? user)) // 'Username'を'User'に変更
             {
                 photographName_textBox.Text = user;
             }
@@ -899,7 +899,7 @@ namespace VSA_launcher
         }
 
         // PictureBoxのクリックイベント - 画像を外部ビューアで開く
-        private void PngPreview_pictureBox_Click(object sender, EventArgs e)
+        private void PngPreview_pictureBox_Click(object? sender, EventArgs e)
         {
             if (!string.IsNullOrEmpty(_currentMetadataImagePath) && File.Exists(_currentMetadataImagePath))
             {
@@ -1060,7 +1060,7 @@ namespace VSA_launcher
         /// <summary>
         /// スタートアップチェックボックスの変更イベントハンドラ
         /// </summary>
-        private void startUp_checkBox_CheckedChanged(object sender, EventArgs e)
+        private void startUp_checkBox_CheckedChanged(object? sender, EventArgs e)
         {
             try
             {
@@ -1147,6 +1147,84 @@ namespace VSA_launcher
                 _settings.LauncherSettings.StartWithWindows = _startWithWindows;
             }
         }
+
+        /// <summary>
+        /// フロント設定の初期化
+        /// </summary>
+        private void InitializeFrontSettings()
+        {
+            // 設定に基づいてUIコントロールの初期状態を設定
+            try
+            {
+                // メタデータ設定の初期化
+                if (metadataEnabled_checkBox != null)
+                {
+                    metadataEnabled_checkBox.Checked = _settings.Metadata.Enabled;
+                }
+
+                // 月別圧縮設定の初期化
+                if (monthCompression_checkBox != null)
+                {
+                    monthCompression_checkBox.Checked = _settings.Compression.AutoCompress;
+                }
+
+                // ファイル細分化設定の初期化
+                if (fileSubdivision_checkBox != null)
+                {
+                    fileSubdivision_checkBox.Checked = _settings.FolderStructure.Enabled;
+                }
+
+                // 期間選択ラジオボタンの初期化
+                if (_settings.FolderStructure.Type == "month" && monthRadio_Button != null)
+                {
+                    monthRadio_Button.Checked = true;
+                }
+                else if (_settings.FolderStructure.Type == "week" && weekRadio_Button != null)
+                {
+                    weekRadio_Button.Checked = true;
+                }
+                else if (_settings.FolderStructure.Type == "day" && dayRadio_Button != null)
+                {
+                    dayRadio_Button.Checked = true;
+                }
+
+                // ファイル名フォーマットコンボボックスの初期化
+                if (fileRename_comboBox != null && !string.IsNullOrEmpty(_settings.FileRenaming.Format))
+                {
+                    // 設定値がコンボボックスに存在するかチェック
+                    int index = fileRename_comboBox.FindStringExact(_settings.FileRenaming.Format);
+                    if (index >= 0)
+                    {
+                        fileRename_comboBox.SelectedIndex = index;
+                    }
+                }
+
+                // パス設定の初期化
+                if (screenShotFile_textBox != null && !string.IsNullOrEmpty(_settings.ScreenshotPath))
+                {
+                    screenShotFile_textBox.Text = _settings.ScreenshotPath;
+                }
+
+                if (outPut_textBox != null && !string.IsNullOrEmpty(_settings.OutputPath))
+                {
+                    outPut_textBox.Text = _settings.OutputPath;
+                }
+
+                // スタートアップ設定の初期化（既にコンストラクターで設定済みだが確認）
+                if (startup_checkBox != null)
+                {
+                    startup_checkBox.Checked = _settings.LauncherSettings.StartWithWindows;
+                }
+
+                System.Diagnostics.Debug.WriteLine("フロント設定の初期化が完了しました");
+                
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"フロント設定初期化エラー: {ex.Message}");
+                // エラーが発生してもアプリケーションの起動を妨げないようにする
+            }
+        }
     }
 
     public class SystemTrayIcon
@@ -1183,10 +1261,6 @@ namespace VSA_launcher
             // モニタリング処理を開始
             StartMainAppMonitoring();
         }
-        public void LaunchMainApplication()
-        {
-            _mainForm.LaunchMainApplication();
-        }
 
         private void ShowSettings()
         {
@@ -1198,67 +1272,10 @@ namespace VSA_launcher
         private void StartMainAppMonitoring()
         {
             // メインアプリケーションの状態を監視するコード
-            // 現在は実装されていないようです
-        }        public void Dispose()
-        {
-            // NotifyIconはフォームが所有しているので、ここでは何もしない
         }
-
-        // フロント設定の初期化
-        private void InitializeFrontSettings()
+        
+        public void Dispose()
         {
-            // チェックボックスの初期値を設定
-            useConfigOutputPath_checkBox.Checked = _settings.FrontSettings.UseConfiguredOutputPath;
-            
-            // イベントハンドラを登録
-            useConfigOutputPath_checkBox.CheckedChanged += useConfigOutputPath_CheckedChanged;
-            
-            // 設定ファイルのoutputPathを使用する場合
-            if (useConfigOutputPath_checkBox.Checked && !string.IsNullOrEmpty(_settings.OutputPath))
-            {
-                outPut_textBox.Text = _settings.OutputPath;
-            }
-            
-            // チェックボックスの状態に応じてテキストボックスの有効/無効を切り替え
-            UpdateOutputPathTextBoxState();
-        }
-
-        // チェックボックスの変更イベントハンドラ
-        private void useConfigOutputPath_CheckedChanged(object? sender, EventArgs e)
-        {
-            if (useConfigOutputPath_checkBox.Checked)
-            {
-                // 設定ファイルのoutputPathを読み込む
-                if (!string.IsNullOrEmpty(_settings.OutputPath))
-                {
-                    outPut_textBox.Text = _settings.OutputPath;
-                }
-            }
-            
-            UpdateOutputPathTextBoxState();
-            SaveFrontSettings();
-        }
-
-        // 出力パステキストボックスの状態を更新
-        private void UpdateOutputPathTextBoxState()
-        {
-            // チェックボックスがチェックされている場合、テキストボックスを読み取り専用にする
-            outPut_textBox.ReadOnly = useConfigOutputPath_checkBox.Checked;
-            outPut_button.Enabled = !useConfigOutputPath_checkBox.Checked;
-        }
-
-        // フロント設定の保存
-        private void SaveFrontSettings()
-        {
-            try
-            {
-                _settings.FrontSettings.UseConfiguredOutputPath = useConfigOutputPath_checkBox.Checked;
-                SettingsManager.SaveSettings(_settings);
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"フロント設定の保存に失敗しました: {ex.Message}", "エラー", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-            }
         }
     }
 }
