@@ -721,7 +721,6 @@ namespace VSA_launcher
 
         private void FileWatcher_StatusChanged(object? sender, StatusChangedEventArgs e)
         {
-            // UIスレッドでの実行を保証
             if (InvokeRequired)
             {
                 BeginInvoke(new Action(() => FileWatcher_StatusChanged(sender, e)));
