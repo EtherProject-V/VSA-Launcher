@@ -88,6 +88,48 @@ namespace VSA_launcher
                     // 確実にBase64エンコードされるよう明示的に処理
                     textChunks.Add(CreateTextChunkData("Usernames", usernames));
                 }
+
+                // 新しいOSC関連のメタデータを個別のチャンクにも保存
+                if (metadata.TryGetValue("VirtualLens2_Aperture", out string vl2Aperture))
+                {
+                    textChunks.Add(CreateTextChunkData("VirtualLens2_Aperture", vl2Aperture));
+                }
+                if (metadata.TryGetValue("VirtualLens2_FocalLength", out string vl2FocalLength))
+                {
+                    textChunks.Add(CreateTextChunkData("VirtualLens2_FocalLength", vl2FocalLength));
+                }
+                if (metadata.TryGetValue("VirtualLens2_Exposure", out string vl2Exposure))
+                {
+                    textChunks.Add(CreateTextChunkData("VirtualLens2_Exposure", vl2Exposure));
+                }
+                if (metadata.TryGetValue("Integral_Aperture", out string intAperture))
+                {
+                    textChunks.Add(CreateTextChunkData("Integral_Aperture", intAperture));
+                }
+                if (metadata.TryGetValue("Integral_FocalLength", out string intFocalLength))
+                {
+                    textChunks.Add(CreateTextChunkData("Integral_FocalLength", intFocalLength));
+                }
+                if (metadata.TryGetValue("Integral_Exposure", out string intExposure))
+                {
+                    textChunks.Add(CreateTextChunkData("Integral_Exposure", intExposure));
+                }
+                if (metadata.TryGetValue("Integral_ShutterSpeed", out string intShutterSpeed))
+                {
+                    textChunks.Add(CreateTextChunkData("Integral_ShutterSpeed", intShutterSpeed));
+                }
+                if (metadata.TryGetValue("Integral_BokehShape", out string intBokehShape))
+                {
+                    textChunks.Add(CreateTextChunkData("Integral_BokehShape", intBokehShape));
+                }
+                if (metadata.TryGetValue("IsIntegral", out string isIntegral))
+                {
+                    textChunks.Add(CreateTextChunkData("IsIntegral", isIntegral));
+                }
+                if (metadata.TryGetValue("IsVirtualLens2", out string isVirtualLens2))
+                {
+                    textChunks.Add(CreateTextChunkData("IsVirtualLens2", isVirtualLens2));
+                }
                 
                 // 3. 説明文を追加
                 StringBuilder description = new StringBuilder();

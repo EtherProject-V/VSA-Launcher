@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Text.RegularExpressions;
+using VSA_launcher.OSCServer; // 追加
 
 namespace VSA_launcher
 {
@@ -14,7 +15,7 @@ namespace VSA_launcher
         private readonly FileNameGenerator _fileNameGenerator;
         private readonly MetadataProcessor _metadataProcessor;
 
-        public ImageProcessor(AppSettings settings, VRChatLogParser logParser, FileWatcherService fileWatcher, Action<string, string> updateStatusAction)
+        public ImageProcessor(AppSettings settings, VRChatLogParser logParser, FileWatcherService fileWatcher, Action<string, string> updateStatusAction, OSCServer.OscDataStore oscDataStore)
         {
             _settings = settings;
             _updateStatusAction = updateStatusAction;
@@ -22,7 +23,7 @@ namespace VSA_launcher
             // 関連クラスの初期化
             _folderManager = new FolderStructureManager(settings);
             _fileNameGenerator = new FileNameGenerator(settings);
-            _metadataProcessor = new MetadataProcessor(logParser, fileWatcher, updateStatusAction);
+            _metadataProcessor = new MetadataProcessor(logParser, fileWatcher, updateStatusAction, oscDataStore);
         }
 
         /// <summary>

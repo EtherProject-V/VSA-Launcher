@@ -1,7 +1,16 @@
+using System;
+using System.Collections.Generic;
 using System.Diagnostics; // Process関連の操作のため
+using System.IO;
+using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading;
+using System.Threading.Tasks;
+using System.Windows.Forms;
 using System.Drawing.Imaging;
+using VSA_launcher.OSCServer; // 追加
+using VRC.OSCQuery; // 追加
 
 namespace VSA_launcher
 {
@@ -22,6 +31,13 @@ namespace VSA_launcher
         private FileNameGenerator _fileNameGenerator = null!;
         private string _currentMetadataImagePath = string.Empty;
 
+        // OSC関連の追加
+        private OscDataStore _oscDataStore = null!;
+        private IntegralOscServer _integralOscServer = null!;
+        private VirtualLens2OscServer _virtualLens2OscServer = null!;
+        private CancellationTokenSource _cancellationTokenSource = null!;
+        private OSCQueryService? _oscQueryService;
+
         // 設定ファイルから読み込んだスタートアップ設定
         private bool _startWithWindows = false;
 
@@ -30,7 +46,32 @@ namespace VSA_launcher
             try
             {
                 InitializeComponent();
-                _settings = SettingsManager.LoadSettings();
+                _settings = SettingsManager.LoadSettings(); // ここに移動
+
+                // LauncherSettingsがnullの場合に備えて初期化
+                if (_settings.LauncherSettings == null)
+                {
+                    _settings.LauncherSettings = new LauncherSettings();
+                }
+
+                // OSC関連の初期化
+                _cancellationTokenSource = new CancellationTokenSource();
+                _oscDataStore = new OSCServer.OscDataStore();
+
+                // OSCQueryServiceの初期化
+                _oscQueryService = new OSCQueryServiceBuilder()
+                    .AdvertiseOSC()
+                    .AdvertiseOSCQuery()
+                    .Build();
+                
+                _integralOscServer = new OSCServer.IntegralOscServer(_settings.LauncherSettings.IntegralOscPort, _cancellationTokenSource.Token, _oscDataStore, _oscQueryService);
+                _integralOscServer.Start();
+                System.Diagnostics.Debug.WriteLine($"Integral OSC Server started on port {_settings.LauncherSettings.IntegralOscPort}");
+
+                _virtualLens2OscServer = new OSCServer.VirtualLens2OscServer(_settings.LauncherSettings.VirtualLens2OscPort, _cancellationTokenSource.Token, _oscDataStore, _oscQueryService);
+                _virtualLens2OscServer.Start();
+                System.Diagnostics.Debug.WriteLine($"VirtualLens2 OSC Server started on port {_settings.LauncherSettings.VirtualLens2OscPort}");
+
                 _systemTrayIcon = new SystemTrayIcon(this, notifyIcon, contextMenuStrip1);
 
                 // ファイル監視サービスの初期化 - 設定を渡す
@@ -98,7 +139,7 @@ namespace VSA_launcher
                 // 画像プロセッサを初期化
                 _folderManager = new FolderStructureManager(_settings);
                 _fileNameGenerator = new FileNameGenerator(_settings);
-                _imageProcessor = new ImageProcessor(_settings, _logParser, _fileWatcher, UpdateStatusInfo);
+                _imageProcessor = new ImageProcessor(_settings, _logParser, _fileWatcher, UpdateStatusInfo, _oscDataStore);
 
                 // スタートアップ設定を適用
                 _startWithWindows = _settings.LauncherSettings.StartWithWindows;
@@ -556,6 +597,11 @@ namespace VSA_launcher
                 _fileWatcher?.Dispose();
                 _statusUpdateTimer?.Dispose();
                 _systemTrayIcon?.Dispose();
+                _cancellationTokenSource?.Cancel(); // OSCサーバーに停止を通知
+                _integralOscServer?.Dispose();
+                _virtualLens2OscServer?.Dispose();
+                _cancellationTokenSource?.Dispose();
+                _oscQueryService?.Dispose(); // 追加
                 components?.Dispose();
             }
             base.Dispose(disposing);
