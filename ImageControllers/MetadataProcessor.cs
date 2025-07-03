@@ -72,6 +72,16 @@ namespace VSA_launcher
                 metadata["IsIntegral"] = _oscDataStore.IsIntegralActive.ToString();
                 metadata["IsVirtualLens2"] = _oscDataStore.IsVirtualLens2Active.ToString();
 
+                // カメラがNormalかどうかを判定
+                if (!_oscDataStore.IsIntegralActive && !_oscDataStore.IsVirtualLens2Active)
+                {
+                    metadata["NormalCamera"] = "true";
+                }
+                else
+                {
+                    metadata["NormalCamera"] = "false";
+                }
+
                 try
                 {
                     // 一時ファイルにメタデータを追加して出力先に保存 (常にPngMetadataManagerを使用)

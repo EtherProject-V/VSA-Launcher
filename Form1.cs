@@ -41,6 +41,12 @@ namespace VSA_launcher
         // 設定ファイルから読み込んだスタートアップ設定
         private bool _startWithWindows = false;
 
+        // カメラモード選択UI要素
+        private RadioButton normalCamera_radioButton = null!;
+        private RadioButton integral_radioButton = null!;
+        private RadioButton virtualLens2_radioButton = null!;
+        private TextBox CameraUsetextbox = null!;
+
         public VSA_launcher()
         {
             try
@@ -63,7 +69,7 @@ namespace VSA_launcher
                     .AdvertiseOSC()
                     .AdvertiseOSCQuery()
                     .Build();
-                
+
                 _integralOscServer = new OSCServer.IntegralOscServer(_settings.LauncherSettings.IntegralOscPort, _cancellationTokenSource.Token, _oscDataStore, _oscQueryService);
                 _integralOscServer.Start();
                 System.Diagnostics.Debug.WriteLine($"Integral OSC Server started on port {_settings.LauncherSettings.IntegralOscPort}");
@@ -111,13 +117,13 @@ namespace VSA_launcher
 
                 System.Windows.Forms.Timer logUpdateTimer = new System.Windows.Forms.Timer();
                 logUpdateTimer.Interval = 2000; // 2秒ごとに更新
-                logUpdateTimer.Tick += (s, e) => 
+                logUpdateTimer.Tick += (s, e) =>
                 {
                     _logParser.ParseLatestLog();
-                    
+
                     // ログを見に行った後、現在のフレンド情報をコンソールに出力
                     Debug.WriteLine($"[{DateTime.Now:yyyy.MM.dd HH:mm:ss}] 現在のインスタンス内ユーザー情報:");
-                    
+
                     // フレンドリストを取得して出力
                     if (_logParser.CurrentFriends != null && _logParser.CurrentFriends.Any())
                     {
@@ -130,12 +136,12 @@ namespace VSA_launcher
                     {
                         Debug.WriteLine(" - インスタンス内ユーザー情報なし");
                     }
-                    
+
                     // 世界情報も出力
                     Debug.WriteLine("----------------------------------------");
                 };
                 logUpdateTimer.Start();
-                
+
                 // 画像プロセッサを初期化
                 _folderManager = new FolderStructureManager(_settings);
                 _fileNameGenerator = new FileNameGenerator(_settings);
@@ -146,15 +152,14 @@ namespace VSA_launcher
                 startup_checkBox.Checked = _startWithWindows;
 
                 // スタートアップの実際の状態を反映
-                
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"アプリケーション初期化エラー: {ex.Message}\n\nスタックトレース: {ex.StackTrace}",
-                               "起動エラー",
-                               MessageBoxButtons.OK,
-                               MessageBoxIcon.Error);
-                Application.Exit();
+MessageBox.Show($"アプリケーション初期化エラー: {ex.Message}\n\nスタックトレース: {ex.StackTrace}",
+               "起動エラー",
+               MessageBoxButtons.OK,
+               MessageBoxIcon.Error);
+Application.Exit();
             }
         }
 
@@ -258,6 +263,7 @@ namespace VSA_launcher
 
             // スタートアップ設定の初期化
             InitializeStartupSetting();
+
 
             // 初期状態のステータス表示
             UpdateStatusInfo("アプリケーション初期化完了", "監視準備中...");
@@ -729,6 +735,24 @@ namespace VSA_launcher
                 photographName_textBox.Text = user;
             }
 
+            // カメラの使用状況を表示
+            if (metadata.TryGetValue("IsIntegral", out string isIntegral) && isIntegral.ToLower() == "true")
+            {
+                CameraUse_textBox.Text = "Integral";
+            }
+            else if (metadata.TryGetValue("IsVirtualLens2", out string isVirtualLens2) && isVirtualLens2.ToLower() == "true")
+            {
+                CameraUse_textBox.Text = "VirtualLens2";
+            }
+            else if (metadata.TryGetValue("NormalCamera", out string normalCamera) && normalCamera.ToLower() == "true")
+            {
+                CameraUse_textBox.Text = "NormalCamera";
+            }
+            else
+            {
+                CameraUse_textBox.Text = "なし";
+            }
+
             // メタデータの存在確認とステータス表示
             if (metadata.Count == 0)
             {
@@ -859,9 +883,9 @@ namespace VSA_launcher
             {
                 // ライセンスフォルダのパスを取得
                 string licenseFolderPath = Path.Combine(
-                    AppDomain.CurrentDomain.BaseDirectory, 
+                    AppDomain.CurrentDomain.BaseDirectory,
                     "LICENSE");
-                
+
                 // フォルダが存在するか確認
                 if (Directory.Exists(licenseFolderPath))
                 {
@@ -977,17 +1001,47 @@ namespace VSA_launcher
         {
             // 現在のスタートアップ状態を確認
             _startWithWindows = StartupManager.IsRegisteredInStartup();
-            
+
             // チェックボックスに反映（イベント発火させないようにする）
             startup_checkBox.CheckedChanged -= startUp_checkBox_CheckedChanged;
             startup_checkBox.Checked = _startWithWindows;
             startup_checkBox.CheckedChanged += startUp_checkBox_CheckedChanged;
-            
+
             // 設定オブジェクトに反映
             if (_settings != null)
             {
                 _settings.LauncherSettings.StartWithWindows = _startWithWindows;
             }
+        }
+
+        private void metaData_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void main_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void worldFriends_richTextBox_TextChanged(object sender, EventArgs e)
+        {
+
+        }
+
+        private void worldName_richTextBox_TextChanged(object sender, EventArgs e)
+        {
+
+        }
+
+        private void label4_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void CameraInfo_label_Click(object sender, EventArgs e)
+        {
+
         }
     }
 

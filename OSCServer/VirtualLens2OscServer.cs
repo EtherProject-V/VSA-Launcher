@@ -67,11 +67,17 @@ namespace VSA_launcher.OSCServer
         {
             switch (message.Address)
             {
+                case "/avatar/parameters/VirtualLens2_Enable":
+                    if (message.Count > 0 && message[0] is bool enabled)
+                    {
+                        _dataStore.IsVirtualLens2Active = enabled;
+                        Debug.WriteLine($"VirtualLens2_Enable updated: {enabled}");
+                    }
+                    break;
                 case "/avatar/parameters/VirtualLens2_Aperture":
                     if (message.Count > 0 && message[0] is float aperture)
                     {
                         _dataStore.VirtualLens2_Aperture = aperture;
-                        _dataStore.IsVirtualLens2Active = true;
                         Debug.WriteLine($"VirtualLens2_Aperture updated: {aperture}");
                     }
                     break;
@@ -79,7 +85,6 @@ namespace VSA_launcher.OSCServer
                     if (message.Count > 0 && message[0] is float focalLength)
                     {
                         _dataStore.VirtualLens2_FocalLength = focalLength;
-                        _dataStore.IsVirtualLens2Active = true;
                         Debug.WriteLine($"VirtualLens2_FocalLength updated: {focalLength}");
                     }
                     break;
@@ -87,7 +92,6 @@ namespace VSA_launcher.OSCServer
                     if (message.Count > 0 && message[0] is float exposure)
                     {
                         _dataStore.VirtualLens2_Exposure = exposure;
-                        _dataStore.IsVirtualLens2Active = true;
                         Debug.WriteLine($"VirtualLens2_Exposure updated: {exposure}");
                     }
                     break;
@@ -101,6 +105,7 @@ namespace VSA_launcher.OSCServer
         {
             if (_oscQueryService == null) return;
 
+            _oscQueryService.AddEndpoint<bool>("/avatar/parameters/VirtualLens2_Enable", Attributes.AccessValues.WriteOnly);
             _oscQueryService.AddEndpoint<float>("/avatar/parameters/VirtualLens2_Aperture", Attributes.AccessValues.WriteOnly);
             _oscQueryService.AddEndpoint<float>("/avatar/parameters/VirtualLens2_Zoom", Attributes.AccessValues.WriteOnly);
             _oscQueryService.AddEndpoint<float>("/avatar/parameters/VirtualLens2_Exposure", Attributes.AccessValues.WriteOnly);
