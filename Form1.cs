@@ -736,21 +736,34 @@ Application.Exit();
             }
 
             // カメラの使用状況を表示
-            if (metadata.TryGetValue("IsIntegral", out string isIntegral) && isIntegral.ToLower() == "true")
+            CameraInfo_richTextBox.Text = string.Empty; // テキストボックスをクリア
+            bool isIntegral = metadata.TryGetValue("IsIntegral", out string isIntegralStr) && isIntegralStr.ToLower() == "true";
+            bool isVirtualLens2 = metadata.TryGetValue("IsVirtualLens2", out string isVirtualLens2Str) && isVirtualLens2Str.ToLower() == "true";
+
+            if (isIntegral)
             {
                 CameraUse_textBox.Text = "Integral";
+                StringBuilder sb = new StringBuilder();
+                if (metadata.TryGetValue("Integral_Aperture", out string aperture)) sb.AppendLine($"Aperture: {aperture}");
+                if (metadata.TryGetValue("Integral_FocalLength", out string focalLength)) sb.AppendLine($"FocalLength: {focalLength}");
+                if (metadata.TryGetValue("Integral_Exposure", out string exposure)) sb.AppendLine($"Exposure: {exposure}");
+                if (metadata.TryGetValue("Integral_ShutterSpeed", out string shutterSpeed)) sb.AppendLine($"ShutterSpeed: {shutterSpeed}");
+                if (metadata.TryGetValue("Integral_BokehShape", out string bokehShape)) sb.AppendLine($"BokehShape: {bokehShape}");
+                CameraInfo_richTextBox.Text = sb.ToString();
             }
-            else if (metadata.TryGetValue("IsVirtualLens2", out string isVirtualLens2) && isVirtualLens2.ToLower() == "true")
+            else if (isVirtualLens2)
             {
                 CameraUse_textBox.Text = "VirtualLens2";
-            }
-            else if (metadata.TryGetValue("NormalCamera", out string normalCamera) && normalCamera.ToLower() == "true")
-            {
-                CameraUse_textBox.Text = "NormalCamera";
+                StringBuilder sb = new StringBuilder();
+                if (metadata.TryGetValue("VirtualLens2_Aperture", out string aperture)) sb.AppendLine($"Aperture: {aperture}");
+                if (metadata.TryGetValue("VirtualLens2_FocalLength", out string focalLength)) sb.AppendLine($"FocalLength: {focalLength}");
+                if (metadata.TryGetValue("VirtualLens2_Exposure", out string exposure)) sb.AppendLine($"Exposure: {exposure}");
+                CameraInfo_richTextBox.Text = sb.ToString();
             }
             else
             {
-                CameraUse_textBox.Text = "なし";
+                CameraUse_textBox.Text = "ノーマルカメラ";
+                CameraInfo_richTextBox.Text = "ノーマルカメラのためなし";
             }
 
             // メタデータの存在確認とステータス表示

@@ -53,6 +53,10 @@
             tabControl = new TabControl();
             main = new TabPage();
             metaData = new TabPage();
+            CameraInfo_richTextBox = new RichTextBox();
+            CameraUse_textBox = new TextBox();
+            CameraInfo_label = new Label();
+            CameraUse_label = new Label();
             worldFriends_richTextBox = new RichTextBox();
             worldName_richTextBox = new RichTextBox();
             photoTime_textBox = new TextBox();
@@ -71,10 +75,6 @@
             LICENSEOpenFolder_button = new Button();
             label2 = new Label();
             LICENSE_label = new Label();
-            CameraUse_label = new Label();
-            CameraInfo_label = new Label();
-            CameraUse_textBox = new TextBox();
-            CameraInfo_richTextBox = new RichTextBox();
             contextMenuStrip1.SuspendLayout();
             statusStrip1.SuspendLayout();
             fileSubdivision_Group.SuspendLayout();
@@ -126,14 +126,14 @@
             statusStrip1.Items.AddRange(new ToolStripItem[] { startingState_toolStripStatusLabel, fileStatus_toolStripStatusLabel1 });
             statusStrip1.Location = new Point(0, 347);
             statusStrip1.Name = "statusStrip1";
-            statusStrip1.Size = new Size(394, 22);
+            statusStrip1.Size = new Size(384, 22);
             statusStrip1.TabIndex = 1;
             statusStrip1.Text = "statusStrip1";
             // 
             // startingState_toolStripStatusLabel
             // 
             startingState_toolStripStatusLabel.Name = "startingState_toolStripStatusLabel";
-            startingState_toolStripStatusLabel.Size = new Size(261, 17);
+            startingState_toolStripStatusLabel.Size = new Size(251, 17);
             startingState_toolStripStatusLabel.Spring = true;
             startingState_toolStripStatusLabel.Text = "toolStripStatusLabel1";
             // 
@@ -347,7 +347,7 @@
             tabControl.Location = new Point(0, 0);
             tabControl.Name = "tabControl";
             tabControl.SelectedIndex = 0;
-            tabControl.Size = new Size(398, 357);
+            tabControl.Size = new Size(388, 357);
             tabControl.TabIndex = 19;
             // 
             // main
@@ -371,14 +371,13 @@
             main.Location = new Point(4, 24);
             main.Name = "main";
             main.Padding = new Padding(3);
-            main.Size = new Size(390, 434);
+            main.Size = new Size(380, 329);
             main.TabIndex = 0;
             main.Text = "メイン";
             main.UseVisualStyleBackColor = true;
             // 
             // metaData
             // 
-            metaData.AutoScroll = true;
             metaData.Controls.Add(CameraInfo_richTextBox);
             metaData.Controls.Add(CameraUse_textBox);
             metaData.Controls.Add(CameraInfo_label);
@@ -397,15 +396,50 @@
             metaData.Controls.Add(PngPreview_pictureBox);
             metaData.Location = new Point(4, 24);
             metaData.Name = "metaData";
-            metaData.Size = new Size(390, 329);
+            metaData.Size = new Size(380, 329);
             metaData.TabIndex = 2;
             metaData.Text = "メタデータ";
             metaData.UseVisualStyleBackColor = true;
             metaData.Click += metaData_Click;
             // 
+            // CameraInfo_richTextBox
+            // 
+            CameraInfo_richTextBox.Location = new Point(90, 279);
+            CameraInfo_richTextBox.Name = "CameraInfo_richTextBox";
+            CameraInfo_richTextBox.Size = new Size(277, 41);
+            CameraInfo_richTextBox.TabIndex = 33;
+            CameraInfo_richTextBox.Text = "";
+            // 
+            // CameraUse_textBox
+            // 
+            CameraUse_textBox.AcceptsReturn = true;
+            CameraUse_textBox.Location = new Point(3, 279);
+            CameraUse_textBox.Name = "CameraUse_textBox";
+            CameraUse_textBox.Size = new Size(82, 23);
+            CameraUse_textBox.TabIndex = 32;
+            // 
+            // CameraInfo_label
+            // 
+            CameraInfo_label.AutoSize = true;
+            CameraInfo_label.Location = new Point(86, 261);
+            CameraInfo_label.Name = "CameraInfo_label";
+            CameraInfo_label.Size = new Size(90, 15);
+            CameraInfo_label.TabIndex = 31;
+            CameraInfo_label.Text = "カメラの撮影情報";
+            CameraInfo_label.Click += CameraInfo_label_Click;
+            // 
+            // CameraUse_label
+            // 
+            CameraUse_label.AutoSize = true;
+            CameraUse_label.Location = new Point(3, 261);
+            CameraUse_label.Name = "CameraUse_label";
+            CameraUse_label.Size = new Size(59, 15);
+            CameraUse_label.TabIndex = 30;
+            CameraUse_label.Text = "撮影カメラ:";
+            // 
             // worldFriends_richTextBox
             // 
-            worldFriends_richTextBox.Location = new Point(194, 217);
+            worldFriends_richTextBox.Location = new Point(194, 214);
             worldFriends_richTextBox.Name = "worldFriends_richTextBox";
             worldFriends_richTextBox.Size = new Size(173, 45);
             worldFriends_richTextBox.TabIndex = 28;
@@ -414,7 +448,7 @@
             // 
             // worldName_richTextBox
             // 
-            worldName_richTextBox.Location = new Point(3, 217);
+            worldName_richTextBox.Location = new Point(3, 214);
             worldName_richTextBox.Name = "worldName_richTextBox";
             worldName_richTextBox.Size = new Size(173, 45);
             worldName_richTextBox.TabIndex = 27;
@@ -438,7 +472,7 @@
             // worldFriends_label
             // 
             worldFriends_label.AutoSize = true;
-            worldFriends_label.Location = new Point(194, 199);
+            worldFriends_label.Location = new Point(194, 196);
             worldFriends_label.Name = "worldFriends_label";
             worldFriends_label.Size = new Size(107, 15);
             worldFriends_label.TabIndex = 24;
@@ -466,7 +500,7 @@
             // worldName_label
             // 
             worldName_label.AutoSize = true;
-            worldName_label.Location = new Point(3, 199);
+            worldName_label.Location = new Point(3, 196);
             worldName_label.Name = "worldName_label";
             worldName_label.Size = new Size(54, 15);
             worldName_label.TabIndex = 21;
@@ -516,7 +550,7 @@
             LICENSE.Location = new Point(4, 24);
             LICENSE.Name = "LICENSE";
             LICENSE.Padding = new Padding(3);
-            LICENSE.Size = new Size(390, 434);
+            LICENSE.Size = new Size(380, 329);
             LICENSE.TabIndex = 1;
             LICENSE.Text = "その他";
             LICENSE.UseVisualStyleBackColor = true;
@@ -570,46 +604,11 @@
             LICENSE_label.TabIndex = 0;
             LICENSE_label.Text = "LICENSE";
             // 
-            // CameraUse_label
-            // 
-            CameraUse_label.AutoSize = true;
-            CameraUse_label.Location = new Point(3, 264);
-            CameraUse_label.Name = "CameraUse_label";
-            CameraUse_label.Size = new Size(59, 15);
-            CameraUse_label.TabIndex = 30;
-            CameraUse_label.Text = "撮影カメラ:";
-            // 
-            // CameraInfo_label
-            // 
-            CameraInfo_label.AutoSize = true;
-            CameraInfo_label.Location = new Point(86, 264);
-            CameraInfo_label.Name = "CameraInfo_label";
-            CameraInfo_label.Size = new Size(90, 15);
-            CameraInfo_label.TabIndex = 31;
-            CameraInfo_label.Text = "カメラの撮影情報";
-            CameraInfo_label.Click += CameraInfo_label_Click;
-            // 
-            // CameraUse_textBox
-            // 
-            CameraUse_textBox.AcceptsReturn = true;
-            CameraUse_textBox.Location = new Point(3, 282);
-            CameraUse_textBox.Name = "CameraUse_textBox";
-            CameraUse_textBox.Size = new Size(82, 23);
-            CameraUse_textBox.TabIndex = 32;
-            // 
-            // CameraInfo_richTextBox
-            // 
-            CameraInfo_richTextBox.Location = new Point(90, 282);
-            CameraInfo_richTextBox.Name = "CameraInfo_richTextBox";
-            CameraInfo_richTextBox.Size = new Size(277, 38);
-            CameraInfo_richTextBox.TabIndex = 33;
-            CameraInfo_richTextBox.Text = "";
-            // 
             // VSA_launcher
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(394, 369);
+            ClientSize = new Size(384, 369);
             Controls.Add(statusStrip1);
             Controls.Add(tabControl);
             Icon = (Icon)resources.GetObject("$this.Icon");
