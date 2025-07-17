@@ -1,0 +1,15 @@
+{
+  "name": "test-image-maker",
+  "version": "1.0.0",
+  "description": "",
+  "main": "imagemaker.js",
+  "scripts": {
+    "start": "node imagemaker.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "pako": "^2.1.0"
+  }
+}

@@ -1,7 +1,16 @@
+using System;
+using System.Collections.Generic;
 using System.Diagnostics; // Process関連の操作のため
+using System.IO;
+using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading;
+using System.Threading.Tasks;
+using System.Windows.Forms;
 using System.Drawing.Imaging;
+using VSA_launcher.OSCServer; // 追加
+using VRC.OSCQuery; // 追加
 
 namespace VSA_launcher
 {
@@ -22,15 +31,53 @@ namespace VSA_launcher
         private FileNameGenerator _fileNameGenerator = null!;
         private string _currentMetadataImagePath = string.Empty;
 
+        // OSC関連の追加
+        private OscDataStore _oscDataStore = null!;
+        private IntegralOscServer _integralOscServer = null!;
+        private VirtualLens2OscServer _virtualLens2OscServer = null!;
+        private CancellationTokenSource _cancellationTokenSource = null!;
+        private OSCQueryService? _oscQueryService;
+
         // 設定ファイルから読み込んだスタートアップ設定
         private bool _startWithWindows = false;
+
+        // カメラモード選択UI要素
+        private RadioButton normalCamera_radioButton = null!;
+        private RadioButton integral_radioButton = null!;
+        private RadioButton virtualLens2_radioButton = null!;
+        private TextBox CameraUsetextbox = null!;
 
         public VSA_launcher()
         {
             try
             {
                 InitializeComponent();
-                _settings = SettingsManager.LoadSettings();
+                _settings = SettingsManager.LoadSettings(); // ここに移動
+
+                // LauncherSettingsがnullの場合に備えて初期化
+                if (_settings.LauncherSettings == null)
+                {
+                    _settings.LauncherSettings = new LauncherSettings();
+                }
+
+                // OSC関連の初期化
+                _cancellationTokenSource = new CancellationTokenSource();
+                _oscDataStore = new OSCServer.OscDataStore();
+
+                // OSCQueryServiceの初期化
+                _oscQueryService = new OSCQueryServiceBuilder()
+                    .AdvertiseOSC()
+                    .AdvertiseOSCQuery()
+                    .Build();
+
+                _integralOscServer = new OSCServer.IntegralOscServer(_settings.LauncherSettings.IntegralOscPort, _cancellationTokenSource.Token, _oscDataStore, _oscQueryService);
+                _integralOscServer.Start();
+                System.Diagnostics.Debug.WriteLine($"Integral OSC Server started on port {_settings.LauncherSettings.IntegralOscPort}");
+
+                _virtualLens2OscServer = new OSCServer.VirtualLens2OscServer(_settings.LauncherSettings.VirtualLens2OscPort, _cancellationTokenSource.Token, _oscDataStore, _oscQueryService);
+                _virtualLens2OscServer.Start();
+                System.Diagnostics.Debug.WriteLine($"VirtualLens2 OSC Server started on port {_settings.LauncherSettings.VirtualLens2OscPort}");
+
                 _systemTrayIcon = new SystemTrayIcon(this, notifyIcon, contextMenuStrip1);
 
                 // ファイル監視サービスの初期化 - 設定を渡す
@@ -42,7 +89,9 @@ namespace VSA_launcher
                 _statusUpdateTimer = new System.Windows.Forms.Timer();
                 _statusUpdateTimer.Interval = 3000; // 3秒ごとに更新
                 _statusUpdateTimer.Tick += StatusUpdateTimer_Tick;
-                _statusUpdateTimer.Start();                launchMainApp_button.Click += (s, e) => LaunchMainApplication();
+                _statusUpdateTimer.Start();
+
+                launchMainApp_button.Click += (s, e) => LaunchMainApplication();
                 metadataEnabled_checkBox.CheckedChanged += metadataEnabled_CheckedChanged;
                 monthCompression_checkBox.CheckedChanged += monthCompression_CheckedChanged;
                 monthRadio_Button.CheckedChanged += radioButton_CheckedChanged;
@@ -68,13 +117,13 @@ namespace VSA_launcher
 
                 System.Windows.Forms.Timer logUpdateTimer = new System.Windows.Forms.Timer();
                 logUpdateTimer.Interval = 2000; // 2秒ごとに更新
-                logUpdateTimer.Tick += (s, e) => 
+                logUpdateTimer.Tick += (s, e) =>
                 {
                     _logParser.ParseLatestLog();
-                    
+
                     // ログを見に行った後、現在のフレンド情報をコンソールに出力
                     Debug.WriteLine($"[{DateTime.Now:yyyy.MM.dd HH:mm:ss}] 現在のインスタンス内ユーザー情報:");
-                    
+
                     // フレンドリストを取得して出力
                     if (_logParser.CurrentFriends != null && _logParser.CurrentFriends.Any())
                     {
@@ -87,32 +136,30 @@ namespace VSA_launcher
                     {
                         Debug.WriteLine(" - インスタンス内ユーザー情報なし");
                     }
-                    
+
                     // 世界情報も出力
                     Debug.WriteLine("----------------------------------------");
                 };
                 logUpdateTimer.Start();
-                
+
                 // 画像プロセッサを初期化
                 _folderManager = new FolderStructureManager(_settings);
                 _fileNameGenerator = new FileNameGenerator(_settings);
-                _imageProcessor = new ImageProcessor(_settings, _logParser, _fileWatcher, UpdateStatusInfo);                // スタートアップ設定を適用
+                _imageProcessor = new ImageProcessor(_settings, _logParser, _fileWatcher, UpdateStatusInfo, _oscDataStore);
+
+                // スタートアップ設定を適用
                 _startWithWindows = _settings.LauncherSettings.StartWithWindows;
                 startup_checkBox.Checked = _startWithWindows;
 
-                // フロント設定を初期化
-                InitializeFrontSettings();
-
                 // スタートアップの実際の状態を反映
-                
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"アプリケーション初期化エラー: {ex.Message}\n\nスタックトレース: {ex.StackTrace}",
-                               "起動エラー",
-                               MessageBoxButtons.OK,
-                               MessageBoxIcon.Error);
-                Application.Exit();
+MessageBox.Show($"アプリケーション初期化エラー: {ex.Message}\n\nスタックトレース: {ex.StackTrace}",
+               "起動エラー",
+               MessageBoxButtons.OK,
+               MessageBoxIcon.Error);
+Application.Exit();
             }
         }
 
@@ -159,7 +206,7 @@ namespace VSA_launcher
         }
 
         // コンボボックス変更イベントハンドラ
-        private void FileRename_ComboBox_SelectedIndexChanged(object? sender, EventArgs e)
+        private void FileRename_ComboBox_SelectedIndexChanged(object sender, EventArgs e)
         {
             // 選択されたインデックスに基づいて設定を更新
             int selectedIndex = fileRename_comboBox.SelectedIndex;
@@ -216,6 +263,7 @@ namespace VSA_launcher
 
             // スタートアップ設定の初期化
             InitializeStartupSetting();
+
 
             // 初期状態のステータス表示
             UpdateStatusInfo("アプリケーション初期化完了", "監視準備中...");
@@ -291,20 +339,20 @@ namespace VSA_launcher
             }
         }
 
-        private void metadataEnabled_CheckedChanged(object? sender, EventArgs e)
+        private void metadataEnabled_CheckedChanged(object sender, EventArgs e)
         {
             _settings.Metadata.Enabled = metadataEnabled_checkBox.Checked;
             SettingsManager.SaveSettings(_settings);
         }
 
-        private void checkBox3_CheckedChanged(object? sender, EventArgs e)
+        private void checkBox3_CheckedChanged(object sender, EventArgs e)
         {
             fileSubdivision_Group.Enabled = fileSubdivision_checkBox.Checked;
             _settings.FolderStructure.Enabled = fileSubdivision_checkBox.Checked;
             SettingsManager.SaveSettings(_settings);
         }
 
-        private void monthCompression_CheckedChanged(object? sender, EventArgs e)
+        private void monthCompression_CheckedChanged(object sender, EventArgs e)
         {
             _settings.Compression.AutoCompress = monthCompression_checkBox.Checked;
             SettingsManager.SaveSettings(_settings);
@@ -351,224 +399,19 @@ namespace VSA_launcher
         // publicに変更してSystemTrayIconからアクセスできるようにする
         public void LaunchMainApplication()
         {
-            try
-            {
-                // アプリデータディレクトリを確認・作成
-                string appDataPath = Path.Combine(
-                    Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-                    "SnapArchiveKai");
-                Directory.CreateDirectory(appDataPath);
-                
-                // フロントエンドのパスを探す
-                string? frontendPath = FindFrontendPath();
-                if (string.IsNullOrEmpty(frontendPath))
-                {
-                    MessageBox.Show(
-                        "メインアプリケーションフォルダが見つかりません。",
-                        "エラー",
-                        MessageBoxButtons.OK,
-                        MessageBoxIcon.Error);
-                    return;
-                }
-
-                // Electronを探す
-                string? electronPath = FindElectronPath(frontendPath);
-                if (string.IsNullOrEmpty(electronPath))
-                {
-                    MessageBox.Show(
-                        "Electronが見つかりません。",
-                        "エラー",
-                        MessageBoxButtons.OK,
-                        MessageBoxIcon.Error);
-                    return;
-                }
-
-                // パスを dist/electron/main.js に変更
-                string mainJsPath = Path.Combine(frontendPath, "dist", "electron", "main.js");
-                
-                if (!File.Exists(mainJsPath))
-                {
-                    // ビルドされたJSファイルが見つからない場合、ビルドを試みる
-                    try {
-                        string npmPath = "npm.cmd";
-                        
-                        // まず最初にReactアプリをビルド
-                        ProcessStartInfo reactBuildInfo = new ProcessStartInfo
-                        {
-                            FileName = npmPath,
-                            Arguments = "run build",
-                            WorkingDirectory = frontendPath,
-                            UseShellExecute = true,
-                            CreateNoWindow = false
-                        };
-                        
-                        // ビルド中であることをユーザーに通知
-                        UpdateStatusInfo("ビルド中", "Reactアプリをビルドしています...");
-                        
-                        var reactBuildProcess = Process.Start(reactBuildInfo);
-                        reactBuildProcess?.WaitForExit();
-                        
-                        // 次にElectronビルド
-                        ProcessStartInfo electronBuildInfo = new ProcessStartInfo
-                        {
-                            FileName = npmPath,
-                            Arguments = "run build-electron",
-                            WorkingDirectory = frontendPath,
-                            UseShellExecute = true,
-                            CreateNoWindow = false
-                        };
-                        
-                        UpdateStatusInfo("ビルド中", "Electronアプリをビルドしています...");
-                        
-                        var buildProcess = Process.Start(electronBuildInfo);
-                        buildProcess?.WaitForExit();
-                        
-                        UpdateStatusInfo("ビルド完了", "アプリケーションのビルドが完了しました");
-                        
-                        // ビルド後も存在確認
-                        if (!File.Exists(mainJsPath))
-                        {
-                            MessageBox.Show(
-                                $"メインJSファイルが見つかりません: {mainJsPath}",
-                                "エラー",
-                                MessageBoxButtons.OK,
-                                MessageBoxIcon.Error);
-                            return;
-                        }
-                        
-                        // build/index.htmlの存在も確認
-                        string indexHtmlPath = Path.Combine(frontendPath, "build", "index.html");
-                        if (!File.Exists(indexHtmlPath))
-                        {
-                            MessageBox.Show(
-                                $"ビルド済みのindex.htmlが見つかりません: {indexHtmlPath}",
-                                "エラー",
-                                MessageBoxButtons.OK,
-                                MessageBoxIcon.Error);
-                            return;
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        MessageBox.Show(
-                            $"ビルド中にエラーが発生しました: {ex.Message}",
-                            "エラー",
-                            MessageBoxButtons.OK,
-                            MessageBoxIcon.Error);
-                        return;
-                    }
-                }
-                
-                ProcessStartInfo startInfo = new ProcessStartInfo
-                {
-                    FileName = electronPath,
-                    Arguments = $"\"{mainJsPath}\"",
-                    WorkingDirectory = frontendPath,
-                    UseShellExecute = true,
-                    CreateNoWindow = false
-                };
-                
-                // ログファイルに起動情報を記録
-                string logPath = Path.Combine(
-                    Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-                    "SnapArchiveKai",
-                    "electron_launch.log");
-                
-                File.WriteAllText(logPath, 
-                    $"Launch attempt: {DateTime.Now}\n" +
-                    $"Electron path: {electronPath}\n" +
-                    $"Main.js path: {mainJsPath}\n" +
-                    $"Working directory: {frontendPath}\n" +
-                    $"Command: {startInfo.FileName} {startInfo.Arguments}\n"
-                );
-                
-                // プロセスを起動
-                Process.Start(startInfo);
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show(
-                    $"アプリケーション起動中にエラーが発生しました: {ex.Message}",
-                    "エラー",
-                    MessageBoxButtons.OK,
-                    MessageBoxIcon.Error);
-            }
+            MessageBox.Show(
+                "現在メインアプリは開発中です。完成をお待ちください。\n\n" +
+                "最新情報は下記のURLからご確認ください：\n" +
+                "Booth: https://fefaether-vrc.booth.pm/\n" +
+                "Twitter(X): https://x.com/fefaethervrc",
+                "お知らせ",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Information);
         }
 
-        // Electronのパスを探す関数
-        private string? FindElectronPath(string frontendPath)
-        {
-            // パッケージ同梱のElectronを最初に確認
-            string packagedElectronPath = Path.Combine(
-                AppDomain.CurrentDomain.BaseDirectory, 
-                "electron", 
-                "electron.exe");
-
-            if (File.Exists(packagedElectronPath))
-            {
-                return packagedElectronPath;
-            }
-
-            // 複数の候補からElectronを探す
-            string[] electronPaths = new string[]
-            {
-                // node_modulesディレクトリからElectronを探す
-                Path.Combine(frontendPath, "node_modules", "electron", "dist", "electron.exe"),
-                
-                // node_modulesディレクトリから.binフォルダを探す
-                Path.Combine(frontendPath, "node_modules", ".bin", "electron.cmd"),
-                Path.Combine(frontendPath, "node_modules", ".bin", "electron.exe"),
-                
-                // グローバルインストールしたElectron
-                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "nodejs", "electron.exe"),
-                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86), "nodejs", "electron.exe")
-            };
-
-            // 最初に見つかったElectronパスを使用
-            foreach (string path in electronPaths)
-            {
-                if (File.Exists(path))
-                {
-                    return path;
-                }
-            }
-
-            return null;
-        }
-
-        private string? FindFrontendPath()
-        {
-            // パッケージ同梱のフロントエンドを最初に確認
-            string packagedFrontendPath = Path.Combine(
-                AppDomain.CurrentDomain.BaseDirectory,
-                "frontend");
-                
-            if (Directory.Exists(packagedFrontendPath))
-            {
-                return packagedFrontendPath;
-            }
-            
-            // フロントエンドの候補パスを設定
-            string[] potentialFrontendPaths = new string[]
-            {
-                Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "frontend"),
-                Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "frontend"),
-                @"d:\programmstage\VSA\frontend"
-            };
-            
-            // 最初に見つかった有効なパスを返す
-            foreach (string path in potentialFrontendPaths)
-            {
-                string normalizedPath = Path.GetFullPath(path);
-                if (Directory.Exists(normalizedPath))
-                {
-                    return normalizedPath;
-                }
-            }
-            
-            return null;
-        }
-
+        /// <summary>
+        /// 起動ボタンの状態を更新
+        /// </summary>
         private void UpdateLaunchButtonState()
         {
             bool isRunning = IsMainAppRunning();
@@ -721,6 +564,7 @@ namespace VSA_launcher
 
         private void FileWatcher_StatusChanged(object? sender, StatusChangedEventArgs e)
         {
+            // UIスレッドでの実行を保証
             if (InvokeRequired)
             {
                 BeginInvoke(new Action(() => FileWatcher_StatusChanged(sender, e)));
@@ -759,6 +603,11 @@ namespace VSA_launcher
                 _fileWatcher?.Dispose();
                 _statusUpdateTimer?.Dispose();
                 _systemTrayIcon?.Dispose();
+                _cancellationTokenSource?.Cancel(); // OSCサーバーに停止を通知
+                _integralOscServer?.Dispose();
+                _virtualLens2OscServer?.Dispose();
+                _cancellationTokenSource?.Dispose();
+                _oscQueryService?.Dispose(); // 追加
                 components?.Dispose();
             }
             base.Dispose(disposing);
@@ -866,24 +715,55 @@ namespace VSA_launcher
             photographName_textBox.Text = string.Empty;
 
             // メタデータを表示
-            if (metadata.TryGetValue("WorldName", out string? worldName))
+            if (metadata.TryGetValue("WorldName", out string worldName))
             {
                 worldName_richTextBox.Text = worldName;
             }
 
-            if (metadata.TryGetValue("Usernames", out string? usernames)) // 'Friends'を'Usernames'に変更
+            if (metadata.TryGetValue("Usernames", out string usernames)) // 'Friends'を'Usernames'に変更
             {
                 worldFriends_richTextBox.Text = usernames;
             }
 
-            if (metadata.TryGetValue("CaptureTime", out string? captureTime))
+            if (metadata.TryGetValue("CaptureTime", out string captureTime))
             {
                 photoTime_textBox.Text = captureTime;
             }
 
-            if (metadata.TryGetValue("User", out string? user)) // 'Username'を'User'に変更
+            if (metadata.TryGetValue("User", out string user)) // 'Username'を'User'に変更
             {
                 photographName_textBox.Text = user;
+            }
+
+            // カメラの使用状況を表示
+            CameraInfo_richTextBox.Text = string.Empty; // テキストボックスをクリア
+            bool isIntegral = metadata.TryGetValue("IsIntegral", out string isIntegralStr) && isIntegralStr.ToLower() == "true";
+            bool isVirtualLens2 = metadata.TryGetValue("IsVirtualLens2", out string isVirtualLens2Str) && isVirtualLens2Str.ToLower() == "true";
+
+            if (isIntegral)
+            {
+                CameraUse_textBox.Text = "Integral";
+                StringBuilder sb = new StringBuilder();
+                if (metadata.TryGetValue("Integral_Aperture", out string aperture)) sb.AppendLine($"Aperture: {aperture}");
+                if (metadata.TryGetValue("Integral_FocalLength", out string focalLength)) sb.AppendLine($"FocalLength: {focalLength}");
+                if (metadata.TryGetValue("Integral_Exposure", out string exposure)) sb.AppendLine($"Exposure: {exposure}");
+                if (metadata.TryGetValue("Integral_ShutterSpeed", out string shutterSpeed)) sb.AppendLine($"ShutterSpeed: {shutterSpeed}");
+                if (metadata.TryGetValue("Integral_BokehShape", out string bokehShape)) sb.AppendLine($"BokehShape: {bokehShape}");
+                CameraInfo_richTextBox.Text = sb.ToString();
+            }
+            else if (isVirtualLens2)
+            {
+                CameraUse_textBox.Text = "VirtualLens2";
+                StringBuilder sb = new StringBuilder();
+                if (metadata.TryGetValue("VirtualLens2_Aperture", out string aperture)) sb.AppendLine($"Aperture: {aperture}");
+                if (metadata.TryGetValue("VirtualLens2_FocalLength", out string focalLength)) sb.AppendLine($"FocalLength: {focalLength}");
+                if (metadata.TryGetValue("VirtualLens2_Exposure", out string exposure)) sb.AppendLine($"Exposure: {exposure}");
+                CameraInfo_richTextBox.Text = sb.ToString();
+            }
+            else
+            {
+                CameraUse_textBox.Text = "ノーマルカメラ";
+                CameraInfo_richTextBox.Text = "ノーマルカメラのためなし";
             }
 
             // メタデータの存在確認とステータス表示
@@ -898,7 +778,7 @@ namespace VSA_launcher
         }
 
         // PictureBoxのクリックイベント - 画像を外部ビューアで開く
-        private void PngPreview_pictureBox_Click(object? sender, EventArgs e)
+        private void PngPreview_pictureBox_Click(object sender, EventArgs e)
         {
             if (!string.IsNullOrEmpty(_currentMetadataImagePath) && File.Exists(_currentMetadataImagePath))
             {
@@ -1016,9 +896,9 @@ namespace VSA_launcher
             {
                 // ライセンスフォルダのパスを取得
                 string licenseFolderPath = Path.Combine(
-                    AppDomain.CurrentDomain.BaseDirectory, 
+                    AppDomain.CurrentDomain.BaseDirectory,
                     "LICENSE");
-                
+
                 // フォルダが存在するか確認
                 if (Directory.Exists(licenseFolderPath))
                 {
@@ -1059,7 +939,7 @@ namespace VSA_launcher
         /// <summary>
         /// スタートアップチェックボックスの変更イベントハンドラ
         /// </summary>
-        private void startUp_checkBox_CheckedChanged(object? sender, EventArgs e)
+        private void startUp_checkBox_CheckedChanged(object sender, EventArgs e)
         {
             try
             {
@@ -1134,12 +1014,12 @@ namespace VSA_launcher
         {
             // 現在のスタートアップ状態を確認
             _startWithWindows = StartupManager.IsRegisteredInStartup();
-            
+
             // チェックボックスに反映（イベント発火させないようにする）
             startup_checkBox.CheckedChanged -= startUp_checkBox_CheckedChanged;
             startup_checkBox.Checked = _startWithWindows;
             startup_checkBox.CheckedChanged += startUp_checkBox_CheckedChanged;
-            
+
             // 設定オブジェクトに反映
             if (_settings != null)
             {
@@ -1147,82 +1027,34 @@ namespace VSA_launcher
             }
         }
 
-        /// <summary>
-        /// フロント設定の初期化
-        /// </summary>
-        private void InitializeFrontSettings()
+        private void metaData_Click(object sender, EventArgs e)
         {
-            // 設定に基づいてUIコントロールの初期状態を設定
-            try
-            {
-                // メタデータ設定の初期化
-                if (metadataEnabled_checkBox != null)
-                {
-                    metadataEnabled_checkBox.Checked = _settings.Metadata.Enabled;
-                }
 
-                // 月別圧縮設定の初期化
-                if (monthCompression_checkBox != null)
-                {
-                    monthCompression_checkBox.Checked = _settings.Compression.AutoCompress;
-                }
+        }
 
-                // ファイル細分化設定の初期化
-                if (fileSubdivision_checkBox != null)
-                {
-                    fileSubdivision_checkBox.Checked = _settings.FolderStructure.Enabled;
-                }
+        private void main_Click(object sender, EventArgs e)
+        {
 
-                // 期間選択ラジオボタンの初期化
-                if (_settings.FolderStructure.Type == "month" && monthRadio_Button != null)
-                {
-                    monthRadio_Button.Checked = true;
-                }
-                else if (_settings.FolderStructure.Type == "week" && weekRadio_Button != null)
-                {
-                    weekRadio_Button.Checked = true;
-                }
-                else if (_settings.FolderStructure.Type == "day" && dayRadio_Button != null)
-                {
-                    dayRadio_Button.Checked = true;
-                }
+        }
 
-                // ファイル名フォーマットコンボボックスの初期化
-                if (fileRename_comboBox != null && !string.IsNullOrEmpty(_settings.FileRenaming.Format))
-                {
-                    // 設定値がコンボボックスに存在するかチェック
-                    int index = fileRename_comboBox.FindStringExact(_settings.FileRenaming.Format);
-                    if (index >= 0)
-                    {
-                        fileRename_comboBox.SelectedIndex = index;
-                    }
-                }
+        private void worldFriends_richTextBox_TextChanged(object sender, EventArgs e)
+        {
 
-                // パス設定の初期化
-                if (screenShotFile_textBox != null && !string.IsNullOrEmpty(_settings.ScreenshotPath))
-                {
-                    screenShotFile_textBox.Text = _settings.ScreenshotPath;
-                }
+        }
 
-                if (outPut_textBox != null && !string.IsNullOrEmpty(_settings.OutputPath))
-                {
-                    outPut_textBox.Text = _settings.OutputPath;
-                }
+        private void worldName_richTextBox_TextChanged(object sender, EventArgs e)
+        {
 
-                // スタートアップ設定の初期化（既にコンストラクターで設定済みだが確認）
-                if (startup_checkBox != null)
-                {
-                    startup_checkBox.Checked = _settings.LauncherSettings.StartWithWindows;
-                }
+        }
 
-                System.Diagnostics.Debug.WriteLine("フロント設定の初期化が完了しました");
-                
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"フロント設定初期化エラー: {ex.Message}");
-                // エラーが発生してもアプリケーションの起動を妨げないようにする
-            }
+        private void label4_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void CameraInfo_label_Click(object sender, EventArgs e)
+        {
+
         }
     }
 
@@ -1260,6 +1092,10 @@ namespace VSA_launcher
             // モニタリング処理を開始
             StartMainAppMonitoring();
         }
+        public void LaunchMainApplication()
+        {
+            _mainForm.LaunchMainApplication();
+        }
 
         private void ShowSettings()
         {
@@ -1271,10 +1107,12 @@ namespace VSA_launcher
         private void StartMainAppMonitoring()
         {
             // メインアプリケーションの状態を監視するコード
+            // 現在は実装されていないようです
         }
-        
+
         public void Dispose()
         {
+            // NotifyIconはフォームが所有しているので、ここでは何もしない
         }
     }
 }

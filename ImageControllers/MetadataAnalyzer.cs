@@ -26,29 +26,56 @@ namespace VSA_launcher
         /// <returns>メタデータの辞書</returns>
         public static Dictionary<string, string> ReadMetadataFromImage(string imagePath)
         {
-            // ファイル拡張子を確認
-            string extension = Path.GetExtension(imagePath).ToLower();
-            Dictionary<string, string> metadata = new Dictionary<string, string>();
-            
-            if (extension == ".png")
+            const int maxRetries = 5;
+            const int delayMilliseconds = 500;
+
+            for (int i = 0; i < maxRetries; i++)
             {
-                System.Diagnostics.Debug.WriteLine($"PNGファイルのメタデータ読み取りを開始: {Path.GetFileName(imagePath)}");
-                
-                // PNGのtEXtチャンクからメタデータを読み取り
-                var pngMetadata = PngMetadataManager.ReadMetadataFromPng(imagePath);
-                
-                if (pngMetadata != null && pngMetadata.Count > 0)
+                if (!IsFileLocked(imagePath))
                 {
-                    System.Diagnostics.Debug.WriteLine($"  PngMetadataManagerで{pngMetadata.Count}項目のメタデータを検出");
-                    return pngMetadata;
+                    // ファイル拡張子を確認
+                    string extension = Path.GetExtension(imagePath).ToLower();
+                    Dictionary<string, string> metadata = new Dictionary<string, string>();
+
+                    if (extension == ".png")
+                    {
+                        System.Diagnostics.Debug.WriteLine($"PNGファイルのメタデータ読み取りを開始: {Path.GetFileName(imagePath)}");
+
+                        // PNGのtEXtチャンクからメタデータを読み取り
+                        var pngMetadata = PngMetadataManager.ReadMetadataFromPng(imagePath);
+
+                        if (pngMetadata != null && pngMetadata.Count > 0)
+                        {
+                            System.Diagnostics.Debug.WriteLine($"  PngMetadataManagerで{pngMetadata.Count}項目のメタデータを検出");
+                            return pngMetadata;
+                        }
+                        else
+                        {
+                            System.Diagnostics.Debug.WriteLine("  メタデータが見つかりませんでした");
+                        }
+                    }
+                    return metadata;
                 }
-                else
+                System.Threading.Thread.Sleep(delayMilliseconds);
+            }
+            System.Diagnostics.Debug.WriteLine($"ファイルがロックされているため、メタデータの読み取りをスキップします: {imagePath}");
+            return new Dictionary<string, string>();
+        }
+
+        private static bool IsFileLocked(string filePath)
+        {
+            try
+            {
+                using (FileStream stream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.None))
                 {
-                    System.Diagnostics.Debug.WriteLine("  メタデータが見つかりませんでした");
+                    stream.Close();
                 }
             }
-            
-            return metadata;
+            catch (IOException)
+            {
+                return true;
+            }
+            return false;
         }
 
         /// <summary>

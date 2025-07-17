@@ -52,6 +52,8 @@ namespace VSA_launcher
     {
         public bool WatchingEnabled { get; set; } = true;
         public bool StartWithWindows { get; set; } = false;
+        public int IntegralOscPort { get; set; } = 9004;
+        public int VirtualLens2OscPort { get; set; } = 9002; // デフォルトポート
     }
 
     // 拡張機能として使われていた古いクラスはVSA_launcher.Settings名前空間に移動

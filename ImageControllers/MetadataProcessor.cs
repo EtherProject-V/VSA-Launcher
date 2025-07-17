@@ -1,4 +1,6 @@
 using System.Diagnostics;
+using System.Text.RegularExpressions;
+using VSA_launcher.OSCServer;
 
 namespace VSA_launcher
 {
@@ -10,12 +12,14 @@ namespace VSA_launcher
         private readonly VRChatLogParser _logParser;
         private readonly FileWatcherService _fileWatcher;
         private readonly Action<string, string> _updateStatusAction;
+        private readonly OscDataStore _oscDataStore;
 
-        public MetadataProcessor(VRChatLogParser logParser, FileWatcherService fileWatcher, Action<string, string> updateStatusAction)
+        public MetadataProcessor(VRChatLogParser logParser, FileWatcherService fileWatcher, Action<string, string> updateStatusAction, OscDataStore oscDataStore)
         {
             _logParser = logParser;
             _fileWatcher = fileWatcher;
             _updateStatusAction = updateStatusAction;
+            _oscDataStore = oscDataStore;
         }
 
         /// <summary>
@@ -38,8 +42,10 @@ namespace VSA_launcher
                 }
                 
                 // ログパーサーから最新情報を取得
-                _logParser.ParseLatestLog();                // ユーザー名（撮影者）の情報を確保
-                string username = _logParser.Username ?? "Unknown User";
+                _logParser.ParseLatestLog();
+
+                // ユーザー名（撮影者）の情報を確保
+                string username = "Unknown User";
 
                 // メタデータの作成
                 var metadata = new Dictionary<string, string>
@@ -52,7 +58,29 @@ namespace VSA_launcher
                     { "VSACheck", "true" } // 互換性のためのフラグ
                 };
 
-                    metadata["Usernames"] = _logParser.GetFriendsString(); 
+                metadata["Usernames"] = _logParser.GetFriendsString();
+
+                // OSC関連のメタデータを追加
+                metadata["VirtualLens2_Aperture"] = _oscDataStore.VirtualLens2_Aperture.ToString();
+                metadata["VirtualLens2_FocalLength"] = _oscDataStore.VirtualLens2_FocalLength.ToString();
+                metadata["VirtualLens2_Exposure"] = _oscDataStore.VirtualLens2_Exposure.ToString();
+                metadata["Integral_Aperture"] = _oscDataStore.Integral_Aperture.ToString();
+                metadata["Integral_FocalLength"] = _oscDataStore.Integral_FocalLength.ToString();
+                metadata["Integral_Exposure"] = _oscDataStore.Integral_Exposure.ToString();
+                metadata["Integral_ShutterSpeed"] = _oscDataStore.Integral_ShutterSpeed.ToString();
+                metadata["Integral_BokehShape"] = _oscDataStore.Integral_BokehShape.ToString();
+                metadata["IsIntegral"] = _oscDataStore.IsIntegralActive.ToString();
+                metadata["IsVirtualLens2"] = _oscDataStore.IsVirtualLens2Active.ToString();
+
+                // カメラがNormalかどうかを判定
+                if (!_oscDataStore.IsIntegralActive && !_oscDataStore.IsVirtualLens2Active)
+                {
+                    metadata["NormalCamera"] = "true";
+                }
+                else
+                {
+                    metadata["NormalCamera"] = "false";
+                }
 
                 try
                 {
@@ -121,7 +149,7 @@ namespace VSA_launcher
                         // 必須キー（VSACheckまたはVSA）が存在するかチェック
                         if (!actualMetadata.ContainsKey("VSA") && !actualMetadata.ContainsKey("VSACheck"))
                         {
-                            Debug.WriteLine($"検証エラー: 処理マーカーが見つかりません: {Path.GetFileName(filePath)}");
+                            Debug.WriteLine($"検証エラー: 処理マーカーが見つかりません: {filePath}");
                             return false;
                         }
                         
@@ -136,7 +164,7 @@ namespace VSA_launcher
                             }
                         }
                         
-                        Debug.WriteLine($"メタデータ検証成功: {Path.GetFileName(filePath)}");
+                        Debug.WriteLine($"メタデータ検証成功: {filePath}");
                         return true;
                     }
                     catch (Exception ex)
