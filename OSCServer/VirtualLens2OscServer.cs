@@ -5,17 +5,24 @@ using System.Threading.Tasks;
 using Rug.Osc;
 using VRC.OSCQuery;
 using System.Diagnostics; // Debug.WriteLine を使用するため追加
+using System.Net;
 
 namespace VSA_launcher.OSCServer
 {
+    /// <summary>
+    /// VirtualLens2 カメラ向けのOSC送信サーバー
+    /// VRChatへのパラメータ送信とOSCQueryエンドポイントの登録を担当
+    /// </summary>
     public class VirtualLens2OscServer : IDisposable
     {
+        private const string VRC_IP_ADDRESS = "127.0.0.1";
+        private const int VRC_SENDER_PORT = 9000;
+        
         private readonly int _port;
-        private OscReceiver? _oscReceiver;
-        private Task? _oscWatcher;
+        private OscSender? _oscSender;
         private CancellationToken _cancellationToken;
         private OSCQueryService? _oscQueryService;
-        private OscDataStore _dataStore; // _dataStore フィールドの宣言
+        private OscDataStore _dataStore;
 
         public VirtualLens2OscServer(int port, CancellationToken cancellationToken, OscDataStore dataStore, OSCQueryService oscQueryService)
         {
@@ -29,76 +36,54 @@ namespace VSA_launcher.OSCServer
 
         public void Start()
         {
-            _oscReceiver = new OscReceiver(_port);
-            _oscReceiver.Connect();
-
-            _oscWatcher = new Task(() => OscReceiverWatcher(), _cancellationToken);
-            _oscWatcher.Start();
-
-            Debug.WriteLine($"VirtualLens2 OSC Server started on port {_port}");
-        }
-
-        private void OscReceiverWatcher()
-        {
             try
             {
-                while (!_cancellationToken.IsCancellationRequested)
-                {
-                    if (_oscReceiver is not null && _oscReceiver.TryReceive(out var packet))
-                    {
-                        if (packet is OscMessage message)
-                        {
-                            ProcessOscMessage(message);
-                        }
-                    }
-                    else
-                    {
-                        Thread.Sleep(1); // CPU使用率を抑える
-                    }
-                }
+                // VRChatへの送信用のOscSenderを初期化
+                IPAddress address = IPAddress.Parse(VRC_IP_ADDRESS);
+                _oscSender = new OscSender(address, VRC_SENDER_PORT);
+                _oscSender.Connect();
+
+                Debug.WriteLine($"VirtualLens2 OSC Sender started - Target: {VRC_IP_ADDRESS}:{VRC_SENDER_PORT}");
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"VirtualLens2 OSC Receiver error: {ex.Message}");
+                Debug.WriteLine($"VirtualLens2 OSC Sender start error: {ex.Message}");
             }
         }
 
-        private void ProcessOscMessage(OscMessage message)
+        /// <summary>
+        /// VRChatにVirtualLens2カメラのパラメータを送信
+        /// </summary>
+        /// <param name="parameterName">パラメータ名</param>
+        /// <param name="value">送信する値</param>
+        public void SendParameter(string parameterName, object value)
         {
-            switch (message.Address)
+            if (_oscSender == null) return;
+
+            try
             {
-                case "/avatar/parameters/VirtualLens2_Enable":
-                    if (message.Count > 0 && message[0] is bool enabled)
-                    {
-                        _dataStore.IsVirtualLens2Active = enabled;
-                        Debug.WriteLine($"VirtualLens2_Enable updated: {enabled}");
-                    }
-                    break;
-                case "/avatar/parameters/VirtualLens2_Aperture":
-                    if (message.Count > 0 && message[0] is float aperture)
-                    {
-                        _dataStore.VirtualLens2_Aperture = aperture;
-                        Debug.WriteLine($"VirtualLens2_Aperture updated: {aperture}");
-                    }
-                    break;
-                case "/avatar/parameters/VirtualLens2_Zoom": 
-                    if (message.Count > 0 && message[0] is float focalLength)
-                    {
-                        _dataStore.VirtualLens2_FocalLength = focalLength;
-                        Debug.WriteLine($"VirtualLens2_FocalLength updated: {focalLength}");
-                    }
-                    break;
-                case "/avatar/parameters/VirtualLens2_Exposure":
-                    if (message.Count > 0 && message[0] is float exposure)
-                    {
-                        _dataStore.VirtualLens2_Exposure = exposure;
-                        Debug.WriteLine($"VirtualLens2_Exposure updated: {exposure}");
-                    }
-                    break;
-                default:
-                    // 未知のメッセージは無視
-                    break;
+                string address = $"/avatar/parameters/{parameterName}";
+                var message = new OscMessage(address, value);
+                _oscSender.Send(message);
+                Debug.WriteLine($"Sent VirtualLens2 parameter: {address} = {value}");
             }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Failed to send VirtualLens2 parameter {parameterName}: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// 現在のデータストアの値をVRChatに送信
+        /// </summary>
+        public void SendCurrentParameters()
+        {
+            if (!_dataStore.IsVirtualLens2Active) return;
+
+            SendParameter("VirtualLens2_Enable", _dataStore.IsVirtualLens2Active);
+            SendParameter("VirtualLens2_Aperture", _dataStore.VirtualLens2_Aperture);
+            SendParameter("VirtualLens2_Zoom", _dataStore.VirtualLens2_FocalLength);
+            SendParameter("VirtualLens2_Exposure", _dataStore.VirtualLens2_Exposure);
         }
 
         private void RegisterOscQueryEndpoints()
@@ -113,8 +98,7 @@ namespace VSA_launcher.OSCServer
 
         public void Dispose()
         {
-            _oscReceiver?.Dispose();
-            _oscWatcher?.Dispose();
+            _oscSender?.Dispose();
         }
     }
 }

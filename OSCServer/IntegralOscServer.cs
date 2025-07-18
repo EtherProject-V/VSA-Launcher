@@ -5,17 +5,24 @@ using System.Threading.Tasks;
 using Rug.Osc;
 using VRC.OSCQuery;
 using System.Diagnostics; // Debug.WriteLine を使用するため追加
+using System.Net;
 
 namespace VSA_launcher.OSCServer
 {
+    /// <summary>
+    /// Integral カメラ向けのOSC送信サーバー
+    /// VRChatへのパラメータ送信とOSCQueryエンドポイントの登録を担当
+    /// </summary>
     public class IntegralOscServer : IDisposable
     {
+        private const string VRC_IP_ADDRESS = "127.0.0.1";
+        private const int VRC_SENDER_PORT = 9000;
+        
         private readonly int _port;
-        private OscReceiver? _oscReceiver;
-        private Task? _oscWatcher;
+        private OscSender? _oscSender;
         private CancellationToken _cancellationToken;
         private OSCQueryService? _oscQueryService;
-        private OscDataStore _dataStore; // _dataStore フィールドの宣言
+        private OscDataStore _dataStore;
 
         public IntegralOscServer(int port, CancellationToken cancellationToken, OscDataStore dataStore, OSCQueryService oscQueryService)
         {
@@ -29,88 +36,55 @@ namespace VSA_launcher.OSCServer
 
         public void Start()
         {
-            _oscReceiver = new OscReceiver(_port);
-            _oscReceiver.Connect();
-
-            _oscWatcher = new Task(() => OscReceiverWatcher(), _cancellationToken);
-            _oscWatcher.Start();
-
-            Debug.WriteLine($"Integral OSC Server started on port {_port}");
-        }
-
-        private void OscReceiverWatcher()
-        {
             try
             {
-                while (!_cancellationToken.IsCancellationRequested)
-                {
-                    if (_oscReceiver is not null && _oscReceiver.TryReceive(out var packet))
-                    {
-                        if (packet is OscMessage message)
-                        {
-                            ProcessOscMessage(message);
-                        }
-                    }
-                    else
-                    {
-                        Thread.Sleep(1); // CPU使用率を抑える
-                    }
-                }
+                // VRChatへの送信用のOscSenderを初期化
+                IPAddress address = IPAddress.Parse(VRC_IP_ADDRESS);
+                _oscSender = new OscSender(address, VRC_SENDER_PORT);
+                _oscSender.Connect();
+
+                Debug.WriteLine($"Integral OSC Sender started - Target: {VRC_IP_ADDRESS}:{VRC_SENDER_PORT}");
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Integral OSC Receiver error: {ex.Message}");
+                Debug.WriteLine($"Integral OSC Sender start error: {ex.Message}");
             }
         }
 
-        private void ProcessOscMessage(OscMessage message)
+        /// <summary>
+        /// VRChatにIntegralカメラのパラメータを送信
+        /// </summary>
+        /// <param name="parameterName">パラメータ名</param>
+        /// <param name="value">送信する値</param>
+        public void SendParameter(string parameterName, object value)
         {
-            switch (message.Address)
+            if (_oscSender == null) return;
+
+            try
             {
-                case "/avatar/parameters/Integral_Aperture":
-                    if (message.Count > 0 && message[0] is float aperture)
-                    {
-                        _dataStore.Integral_Aperture = aperture;
-                        _dataStore.IsIntegralActive = true;
-                        Debug.WriteLine($"Integral_Aperture updated: {aperture}");
-                    }
-                    break;
-                case "/avatar/parameters/Integral_Zoom": // 焦点距離はZoomとして扱われることが多い
-                    if (message.Count > 0 && message[0] is float focalLength)
-                    {
-                        _dataStore.Integral_FocalLength = focalLength;
-                        _dataStore.IsIntegralActive = true;
-                        Debug.WriteLine($"Integral_FocalLength updated: {focalLength}");
-                    }
-                    break;
-                case "/avatar/parameters/Integral_Exposure":
-                    if (message.Count > 0 && message[0] is float exposure)
-                    {
-                        _dataStore.Integral_Exposure = exposure;
-                        _dataStore.IsIntegralActive = true;
-                        Debug.WriteLine($"Integral_Exposure updated: {exposure}");
-                    }
-                    break;
-                case "/avatar/parameters/Integral_ShutterSpeed":
-                    if (message.Count > 0 && message[0] is float shutterSpeed)
-                    {
-                        _dataStore.Integral_ShutterSpeed = shutterSpeed;
-                        _dataStore.IsIntegralActive = true;
-                        Debug.WriteLine($"Integral_ShutterSpeed updated: {shutterSpeed}");
-                    }
-                    break;
-                case "/avatar/parameters/Integral_BokehShape":
-                    if (message.Count > 0 && message[0] is int bokehShape)
-                    {
-                        _dataStore.Integral_BokehShape = bokehShape;
-                        _dataStore.IsIntegralActive = true;
-                        Debug.WriteLine($"Integral_BokehShape updated: {bokehShape}");
-                    }
-                    break;
-                default:
-                    // 未知のメッセージは無視
-                    break;
+                string address = $"/avatar/parameters/{parameterName}";
+                var message = new OscMessage(address, value);
+                _oscSender.Send(message);
+                Debug.WriteLine($"Sent Integral parameter: {address} = {value}");
             }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Failed to send Integral parameter {parameterName}: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// 現在のデータストアの値をVRChatに送信
+        /// </summary>
+        public void SendCurrentParameters()
+        {
+            if (!_dataStore.IsIntegralActive) return;
+
+            SendParameter("Integral_Aperture", _dataStore.Integral_Aperture);
+            SendParameter("Integral_Zoom", _dataStore.Integral_FocalLength);
+            SendParameter("Integral_Exposure", _dataStore.Integral_Exposure);
+            SendParameter("Integral_ShutterSpeed", _dataStore.Integral_ShutterSpeed);
+            SendParameter("Integral_BokehShape", _dataStore.Integral_BokehShape);
         }
 
         private void RegisterOscQueryEndpoints()
@@ -126,8 +100,7 @@ namespace VSA_launcher.OSCServer
 
         public void Dispose()
         {
-            _oscReceiver?.Dispose();
-            _oscWatcher?.Dispose();
+            _oscSender?.Dispose();
         }
     }
 }

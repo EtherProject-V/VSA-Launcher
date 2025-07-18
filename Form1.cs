@@ -35,8 +35,14 @@ namespace VSA_launcher
         private OscDataStore _oscDataStore = null!;
         private IntegralOscServer _integralOscServer = null!;
         private VirtualLens2OscServer _virtualLens2OscServer = null!;
+        private VRChatListener _vrchatListener = null!; // VRChatからの受信用リスナー
         private CancellationTokenSource _cancellationTokenSource = null!;
         private OSCQueryService? _oscQueryService;
+
+        // VRChat監視関連
+        private System.Windows.Forms.Timer _vrchatMonitorTimer = null!;
+        private bool _isVRChatRunning = false;
+        private bool _hasInitializedCamera = false;
 
         // 設定ファイルから読み込んだスタートアップ設定
         private bool _startWithWindows = false;
@@ -70,13 +76,19 @@ namespace VSA_launcher
                     .AdvertiseOSCQuery()
                     .Build();
 
+                // VRChatからの受信用リスナーを開始
+                _vrchatListener = new OSCServer.VRChatListener(_oscDataStore);
+                _vrchatListener.Start();
+                System.Diagnostics.Debug.WriteLine("VRChat OSC Listener started on port 9001");
+
+                // 送信専用のOSCサーバーを初期化
                 _integralOscServer = new OSCServer.IntegralOscServer(_settings.LauncherSettings.IntegralOscPort, _cancellationTokenSource.Token, _oscDataStore, _oscQueryService);
                 _integralOscServer.Start();
-                System.Diagnostics.Debug.WriteLine($"Integral OSC Server started on port {_settings.LauncherSettings.IntegralOscPort}");
+                System.Diagnostics.Debug.WriteLine($"Integral OSC Sender started - Target: 127.0.0.1:9000");
 
                 _virtualLens2OscServer = new OSCServer.VirtualLens2OscServer(_settings.LauncherSettings.VirtualLens2OscPort, _cancellationTokenSource.Token, _oscDataStore, _oscQueryService);
                 _virtualLens2OscServer.Start();
-                System.Diagnostics.Debug.WriteLine($"VirtualLens2 OSC Server started on port {_settings.LauncherSettings.VirtualLens2OscPort}");
+                System.Diagnostics.Debug.WriteLine($"VirtualLens2 OSC Sender started - Target: 127.0.0.1:9000");
 
                 _systemTrayIcon = new SystemTrayIcon(this, notifyIcon, contextMenuStrip1);
 
@@ -155,11 +167,11 @@ namespace VSA_launcher
             }
             catch (Exception ex)
             {
-MessageBox.Show($"アプリケーション初期化エラー: {ex.Message}\n\nスタックトレース: {ex.StackTrace}",
-               "起動エラー",
-               MessageBoxButtons.OK,
-               MessageBoxIcon.Error);
-Application.Exit();
+                MessageBox.Show($"アプリケーション初期化エラー: {ex.Message}\n\nスタックトレース: {ex.StackTrace}",
+                               "起動エラー",
+                               MessageBoxButtons.OK,
+                               MessageBoxIcon.Error);
+                Application.Exit();
             }
         }
 
@@ -265,8 +277,8 @@ Application.Exit();
             InitializeStartupSetting();
 
 
-            // 初期状態のステータス表示
-            UpdateStatusInfo("アプリケーション初期化完了", "監視準備中...");
+            // 初期状態のステータス表示（カメラモード情報を含む）
+            UpdateStatusInfoWithCamera("アプリケーション初期化完了", "監視準備中...");
 
             // スクリーンショットフォルダが設定済みなら監視を開始
             if (!string.IsNullOrEmpty(_settings.ScreenshotPath) && Directory.Exists(_settings.ScreenshotPath))
@@ -381,6 +393,23 @@ Application.Exit();
             }
 
             startingState_toolStripStatusLabel.Text = statusMessage;
+            fileStatus_toolStripStatusLabel1.Text = fileStatusMessage;
+        }
+
+        // カメラモード情報を含むステータス表示の更新
+        public void UpdateStatusInfoWithCamera(string statusMessage, string fileStatusMessage)
+        {
+            // UIスレッドでの実行を保証
+            if (InvokeRequired)
+            {
+                BeginInvoke(new Action(() => UpdateStatusInfoWithCamera(statusMessage, fileStatusMessage)));
+                return;
+            }
+
+            // カメラモード情報を取得
+            string cameraStatus = _oscDataStore.GetCameraModeStatus();
+
+            startingState_toolStripStatusLabel.Text = $"{statusMessage} | {cameraStatus}";
             fileStatus_toolStripStatusLabel1.Text = fileStatusMessage;
         }
 
@@ -586,8 +615,12 @@ Application.Exit();
             // 定期的なステータス更新
             if (_fileWatcher.IsWatching)
             {
-                fileStatus_toolStripStatusLabel1.Text =
-                    $"監視: {_fileWatcher.DetectedFilesCount} 処理: {_fileWatcher.ProcessedFilesCount} エラー: {_fileWatcher.ErrorCount}";
+                // カメラモード情報を含むステータス更新
+                string fileStatus = $"監視: {_fileWatcher.DetectedFilesCount} 処理: {_fileWatcher.ProcessedFilesCount} エラー: {_fileWatcher.ErrorCount}";
+                string cameraStatus = _oscDataStore.GetCameraModeStatus();
+
+                startingState_toolStripStatusLabel.Text = $"監視中 | {cameraStatus}";
+                fileStatus_toolStripStatusLabel1.Text = fileStatus;
             }
         }
 
@@ -604,6 +637,7 @@ Application.Exit();
                 _statusUpdateTimer?.Dispose();
                 _systemTrayIcon?.Dispose();
                 _cancellationTokenSource?.Cancel(); // OSCサーバーに停止を通知
+                _vrchatListener?.Dispose(); // VRChatリスナーを
                 _integralOscServer?.Dispose();
                 _virtualLens2OscServer?.Dispose();
                 _cancellationTokenSource?.Dispose();
@@ -1053,6 +1087,46 @@ Application.Exit();
         }
 
         private void CameraInfo_label_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void label4_Click_1(object sender, EventArgs e)
+        {
+
+        }
+
+        private void OSCStatus_toolStripStatusLabel_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void startingState_toolStripStatusLabel_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void label4_Click_2(object sender, EventArgs e)
+        {
+
+        }
+
+        private void checkBox1_CheckedChanged(object sender, EventArgs e)
+        {
+
+        }
+
+        private void label4_Click_3(object sender, EventArgs e)
+        {
+
+        }
+
+        private void label5_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void VirtualLens2_groupBox_Enter(object sender, EventArgs e)
         {
 
         }
