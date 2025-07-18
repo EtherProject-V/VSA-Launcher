@@ -71,6 +71,28 @@
             PngMetaDate_button = new Button();
             PngPreview_pictureBox = new PictureBox();
             CameraSettings = new TabPage();
+            groupBox1 = new GroupBox();
+            textBox4 = new TextBox();
+            label7 = new Label();
+            textBox3 = new TextBox();
+            label6 = new Label();
+            Integral_Exposure_textBox = new TextBox();
+            Integral_Aperture_textBox = new TextBox();
+            Integral_Exposure_label = new Label();
+            Integral_Aperture_label = new Label();
+            Integral_FocalLength_textBox = new TextBox();
+            Integral_FocalLength_label = new Label();
+            useCamera_groupBox = new GroupBox();
+            modeVirtualLens2_radioButton = new RadioButton();
+            modeIntegral_radioButton = new RadioButton();
+            useCamera_checkBox = new CheckBox();
+            VirtualLens2_groupBox = new GroupBox();
+            VirtualLens2_Exposure_textBox = new TextBox();
+            VirtualLens2_Exposure_label = new Label();
+            VirtualLens2_FocalLength_textBox = new TextBox();
+            VirtualLens2_FocalLength_label = new Label();
+            VirtualLens2_Aperture_textBox = new TextBox();
+            VirtualLens2_Aperture_label = new Label();
             CameraSettings_label = new Label();
             LICENSE = new TabPage();
             label3 = new Label();
@@ -78,29 +100,10 @@
             LICENSEOpenFolder_button = new Button();
             label2 = new Label();
             LICENSE_label = new Label();
-            contextMenuStrip2 = new ContextMenuStrip(components);
-            VirtualLens2_groupBox = new GroupBox();
-            modeVirtualLens2_radioButton = new RadioButton();
-            modeIntegral_radioButton = new RadioButton();
-            useCamera_checkBox = new CheckBox();
-            useCamera_groupBox = new GroupBox();
-            VirtualLens2_Aperture_label = new Label();
-            VirtualLens2_Aperture_textBox = new TextBox();
-            VirtualLens2_FocalLength_textBox = new TextBox();
-            VirtualLens2_FocalLength_label = new Label();
-            VirtualLens2_Exposure_textBox = new TextBox();
-            VirtualLens2_Exposure_label = new Label();
-            groupBox1 = new GroupBox();
-            Integral_Aperture_textBox = new TextBox();
-            Integral_Aperture_label = new Label();
-            Integral_Exposure_textBox = new TextBox();
-            Integral_Exposure_label = new Label();
-            Integral_FocalLength_textBox = new TextBox();
-            Integral_FocalLength_label = new Label();
-            textBox3 = new TextBox();
-            label6 = new Label();
-            textBox4 = new TextBox();
-            label7 = new Label();
+            CameraSettingApply_button = new Button();
+            CameraSetting_groupBox = new GroupBox();
+            cameraSettomg_checkBox = new CheckBox();
+            toolTip1 = new ToolTip(components);
             contextMenuStrip1.SuspendLayout();
             statusStrip1.SuspendLayout();
             fileSubdivision_Group.SuspendLayout();
@@ -110,10 +113,11 @@
             metaData.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)PngPreview_pictureBox).BeginInit();
             CameraSettings.SuspendLayout();
-            LICENSE.SuspendLayout();
-            VirtualLens2_groupBox.SuspendLayout();
-            useCamera_groupBox.SuspendLayout();
             groupBox1.SuspendLayout();
+            useCamera_groupBox.SuspendLayout();
+            VirtualLens2_groupBox.SuspendLayout();
+            LICENSE.SuspendLayout();
+            CameraSetting_groupBox.SuspendLayout();
             SuspendLayout();
             // 
             // notifyIcon
@@ -581,10 +585,9 @@
             // 
             // CameraSettings
             // 
-            CameraSettings.Controls.Add(groupBox1);
-            CameraSettings.Controls.Add(useCamera_groupBox);
-            CameraSettings.Controls.Add(useCamera_checkBox);
-            CameraSettings.Controls.Add(VirtualLens2_groupBox);
+            CameraSettings.Controls.Add(cameraSettomg_checkBox);
+            CameraSettings.Controls.Add(CameraSetting_groupBox);
+            CameraSettings.Controls.Add(CameraSettingApply_button);
             CameraSettings.Controls.Add(CameraSettings_label);
             CameraSettings.Location = new Point(4, 24);
             CameraSettings.Name = "CameraSettings";
@@ -593,15 +596,241 @@
             CameraSettings.Text = "カメラの初期値";
             CameraSettings.UseVisualStyleBackColor = true;
             // 
+            // groupBox1
+            // 
+            groupBox1.Controls.Add(textBox4);
+            groupBox1.Controls.Add(label7);
+            groupBox1.Controls.Add(textBox3);
+            groupBox1.Controls.Add(label6);
+            groupBox1.Controls.Add(Integral_Exposure_textBox);
+            groupBox1.Controls.Add(Integral_Aperture_textBox);
+            groupBox1.Controls.Add(Integral_Exposure_label);
+            groupBox1.Controls.Add(Integral_Aperture_label);
+            groupBox1.Controls.Add(Integral_FocalLength_textBox);
+            groupBox1.Controls.Add(Integral_FocalLength_label);
+            groupBox1.Location = new Point(2, 146);
+            groupBox1.Name = "groupBox1";
+            groupBox1.Size = new Size(374, 78);
+            groupBox1.TabIndex = 33;
+            groupBox1.TabStop = false;
+            groupBox1.Text = "Integral";
+            // 
+            // textBox4
+            // 
+            textBox4.Location = new Point(230, 46);
+            textBox4.Name = "textBox4";
+            textBox4.Size = new Size(55, 23);
+            textBox4.TabIndex = 40;
+            // 
+            // label7
+            // 
+            label7.AutoSize = true;
+            label7.CausesValidation = false;
+            label7.Font = new Font("Yu Gothic UI", 9F);
+            label7.Location = new Point(160, 49);
+            label7.Name = "label7";
+            label7.Size = new Size(64, 15);
+            label7.TabIndex = 39;
+            label7.Text = "ボケシェイプ:";
+            // 
+            // textBox3
+            // 
+            textBox3.Location = new Point(99, 46);
+            textBox3.Name = "textBox3";
+            textBox3.Size = new Size(55, 23);
+            textBox3.TabIndex = 38;
+            // 
+            // label6
+            // 
+            label6.AutoSize = true;
+            label6.CausesValidation = false;
+            label6.Font = new Font("Yu Gothic UI", 9F);
+            label6.Location = new Point(6, 49);
+            label6.Name = "label6";
+            label6.Size = new Size(87, 15);
+            label6.TabIndex = 37;
+            label6.Text = "シャッタースピード:";
+            // 
+            // Integral_Exposure_textBox
+            // 
+            Integral_Exposure_textBox.Location = new Point(228, 17);
+            Integral_Exposure_textBox.Name = "Integral_Exposure_textBox";
+            Integral_Exposure_textBox.Size = new Size(55, 23);
+            Integral_Exposure_textBox.TabIndex = 36;
+            // 
+            // Integral_Aperture_textBox
+            // 
+            Integral_Aperture_textBox.Location = new Point(37, 16);
+            Integral_Aperture_textBox.Name = "Integral_Aperture_textBox";
+            Integral_Aperture_textBox.Size = new Size(55, 23);
+            Integral_Aperture_textBox.TabIndex = 28;
+            // 
+            // Integral_Exposure_label
+            // 
+            Integral_Exposure_label.AutoSize = true;
+            Integral_Exposure_label.CausesValidation = false;
+            Integral_Exposure_label.Font = new Font("Yu Gothic UI", 9F);
+            Integral_Exposure_label.Location = new Point(193, 20);
+            Integral_Exposure_label.Name = "Integral_Exposure_label";
+            Integral_Exposure_label.Size = new Size(34, 15);
+            Integral_Exposure_label.TabIndex = 35;
+            Integral_Exposure_label.Text = "露出:";
+            // 
+            // Integral_Aperture_label
+            // 
+            Integral_Aperture_label.AutoSize = true;
+            Integral_Aperture_label.CausesValidation = false;
+            Integral_Aperture_label.Font = new Font("Yu Gothic UI", 9F);
+            Integral_Aperture_label.Location = new Point(6, 20);
+            Integral_Aperture_label.Name = "Integral_Aperture_label";
+            Integral_Aperture_label.Size = new Size(30, 15);
+            Integral_Aperture_label.TabIndex = 27;
+            Integral_Aperture_label.Text = "絞り:";
+            // 
+            // Integral_FocalLength_textBox
+            // 
+            Integral_FocalLength_textBox.Location = new Point(132, 17);
+            Integral_FocalLength_textBox.Name = "Integral_FocalLength_textBox";
+            Integral_FocalLength_textBox.Size = new Size(55, 23);
+            Integral_FocalLength_textBox.TabIndex = 34;
+            // 
+            // Integral_FocalLength_label
+            // 
+            Integral_FocalLength_label.AutoSize = true;
+            Integral_FocalLength_label.CausesValidation = false;
+            Integral_FocalLength_label.Font = new Font("Yu Gothic UI", 9F);
+            Integral_FocalLength_label.Location = new Point(98, 20);
+            Integral_FocalLength_label.Name = "Integral_FocalLength_label";
+            Integral_FocalLength_label.Size = new Size(36, 15);
+            Integral_FocalLength_label.TabIndex = 33;
+            Integral_FocalLength_label.Text = "ズーム:";
+            // 
+            // useCamera_groupBox
+            // 
+            useCamera_groupBox.Controls.Add(modeVirtualLens2_radioButton);
+            useCamera_groupBox.Controls.Add(modeIntegral_radioButton);
+            useCamera_groupBox.Location = new Point(2, 43);
+            useCamera_groupBox.Name = "useCamera_groupBox";
+            useCamera_groupBox.Size = new Size(374, 42);
+            useCamera_groupBox.TabIndex = 24;
+            useCamera_groupBox.TabStop = false;
+            useCamera_groupBox.Text = "カメラ初期起動設定";
+            // 
+            // modeVirtualLens2_radioButton
+            // 
+            modeVirtualLens2_radioButton.AutoSize = true;
+            modeVirtualLens2_radioButton.Location = new Point(6, 17);
+            modeVirtualLens2_radioButton.Name = "modeVirtualLens2_radioButton";
+            modeVirtualLens2_radioButton.Size = new Size(89, 19);
+            modeVirtualLens2_radioButton.TabIndex = 24;
+            modeVirtualLens2_radioButton.TabStop = true;
+            modeVirtualLens2_radioButton.Text = "VirtualLens2";
+            modeVirtualLens2_radioButton.UseVisualStyleBackColor = true;
+            // 
+            // modeIntegral_radioButton
+            // 
+            modeIntegral_radioButton.AutoSize = true;
+            modeIntegral_radioButton.Location = new Point(101, 17);
+            modeIntegral_radioButton.Name = "modeIntegral_radioButton";
+            modeIntegral_radioButton.Size = new Size(65, 19);
+            modeIntegral_radioButton.TabIndex = 25;
+            modeIntegral_radioButton.TabStop = true;
+            modeIntegral_radioButton.Text = "Integral";
+            modeIntegral_radioButton.UseVisualStyleBackColor = true;
+            // 
+            // useCamera_checkBox
+            // 
+            useCamera_checkBox.AutoSize = true;
+            useCamera_checkBox.Location = new Point(7, 22);
+            useCamera_checkBox.Name = "useCamera_checkBox";
+            useCamera_checkBox.Size = new Size(161, 19);
+            useCamera_checkBox.TabIndex = 26;
+            useCamera_checkBox.Text = "カメラを最初から起動しておく";
+            useCamera_checkBox.UseVisualStyleBackColor = true;
+            useCamera_checkBox.CheckedChanged += checkBox1_CheckedChanged;
+            // 
+            // VirtualLens2_groupBox
+            // 
+            VirtualLens2_groupBox.Controls.Add(VirtualLens2_Exposure_textBox);
+            VirtualLens2_groupBox.Controls.Add(VirtualLens2_Exposure_label);
+            VirtualLens2_groupBox.Controls.Add(VirtualLens2_FocalLength_textBox);
+            VirtualLens2_groupBox.Controls.Add(VirtualLens2_FocalLength_label);
+            VirtualLens2_groupBox.Controls.Add(VirtualLens2_Aperture_textBox);
+            VirtualLens2_groupBox.Controls.Add(VirtualLens2_Aperture_label);
+            VirtualLens2_groupBox.Location = new Point(2, 91);
+            VirtualLens2_groupBox.Name = "VirtualLens2_groupBox";
+            VirtualLens2_groupBox.Size = new Size(374, 49);
+            VirtualLens2_groupBox.TabIndex = 23;
+            VirtualLens2_groupBox.TabStop = false;
+            VirtualLens2_groupBox.Text = "VirtualLens2";
+            VirtualLens2_groupBox.Enter += VirtualLens2_groupBox_Enter;
+            // 
+            // VirtualLens2_Exposure_textBox
+            // 
+            VirtualLens2_Exposure_textBox.Location = new Point(236, 16);
+            VirtualLens2_Exposure_textBox.Name = "VirtualLens2_Exposure_textBox";
+            VirtualLens2_Exposure_textBox.Size = new Size(55, 23);
+            VirtualLens2_Exposure_textBox.TabIndex = 32;
+            // 
+            // VirtualLens2_Exposure_label
+            // 
+            VirtualLens2_Exposure_label.AutoSize = true;
+            VirtualLens2_Exposure_label.CausesValidation = false;
+            VirtualLens2_Exposure_label.Font = new Font("Yu Gothic UI", 9F);
+            VirtualLens2_Exposure_label.Location = new Point(196, 19);
+            VirtualLens2_Exposure_label.Name = "VirtualLens2_Exposure_label";
+            VirtualLens2_Exposure_label.Size = new Size(34, 15);
+            VirtualLens2_Exposure_label.TabIndex = 31;
+            VirtualLens2_Exposure_label.Text = "露出:";
+            // 
+            // VirtualLens2_FocalLength_textBox
+            // 
+            VirtualLens2_FocalLength_textBox.Location = new Point(135, 16);
+            VirtualLens2_FocalLength_textBox.Name = "VirtualLens2_FocalLength_textBox";
+            VirtualLens2_FocalLength_textBox.Size = new Size(55, 23);
+            VirtualLens2_FocalLength_textBox.TabIndex = 30;
+            // 
+            // VirtualLens2_FocalLength_label
+            // 
+            VirtualLens2_FocalLength_label.AutoSize = true;
+            VirtualLens2_FocalLength_label.CausesValidation = false;
+            VirtualLens2_FocalLength_label.Font = new Font("Yu Gothic UI", 9F);
+            VirtualLens2_FocalLength_label.Location = new Point(101, 19);
+            VirtualLens2_FocalLength_label.Name = "VirtualLens2_FocalLength_label";
+            VirtualLens2_FocalLength_label.Size = new Size(36, 15);
+            VirtualLens2_FocalLength_label.TabIndex = 29;
+            VirtualLens2_FocalLength_label.Text = "ズーム:";
+            VirtualLens2_FocalLength_label.Click += label5_Click;
+            // 
+            // VirtualLens2_Aperture_textBox
+            // 
+            VirtualLens2_Aperture_textBox.Location = new Point(40, 16);
+            VirtualLens2_Aperture_textBox.Name = "VirtualLens2_Aperture_textBox";
+            VirtualLens2_Aperture_textBox.Size = new Size(55, 23);
+            VirtualLens2_Aperture_textBox.TabIndex = 28;
+            // 
+            // VirtualLens2_Aperture_label
+            // 
+            VirtualLens2_Aperture_label.AutoSize = true;
+            VirtualLens2_Aperture_label.CausesValidation = false;
+            VirtualLens2_Aperture_label.Font = new Font("Yu Gothic UI", 9F);
+            VirtualLens2_Aperture_label.Location = new Point(6, 20);
+            VirtualLens2_Aperture_label.Name = "VirtualLens2_Aperture_label";
+            VirtualLens2_Aperture_label.Size = new Size(30, 15);
+            VirtualLens2_Aperture_label.TabIndex = 27;
+            VirtualLens2_Aperture_label.Text = "絞り:";
+            VirtualLens2_Aperture_label.Click += label4_Click_3;
+            // 
             // CameraSettings_label
             // 
             CameraSettings_label.AutoSize = true;
             CameraSettings_label.CausesValidation = false;
-            CameraSettings_label.Location = new Point(3, 7);
+            CameraSettings_label.ForeColor = Color.Firebrick;
+            CameraSettings_label.Location = new Point(196, 0);
             CameraSettings_label.Name = "CameraSettings_label";
-            CameraSettings_label.Size = new Size(273, 30);
+            CameraSettings_label.Size = new Size(183, 15);
             CameraSettings_label.TabIndex = 21;
-            CameraSettings_label.Text = "※こちらはVL2.Integral用の項目です\r\nVRChat起動時にカメラの初期値をこちらで上書きします。";
+            CameraSettings_label.Text = "※こちらはVL2.Integral用の項目です\r\n";
             CameraSettings_label.Click += label4_Click_1;
             // 
             // LICENSE
@@ -668,236 +897,38 @@
             LICENSE_label.TabIndex = 0;
             LICENSE_label.Text = "LICENSE";
             // 
-            // contextMenuStrip2
+            // CameraSettingApply_button
             // 
-            contextMenuStrip2.Name = "contextMenuStrip2";
-            contextMenuStrip2.Size = new Size(61, 4);
+            CameraSettingApply_button.Location = new Point(297, 296);
+            CameraSettingApply_button.Name = "CameraSettingApply_button";
+            CameraSettingApply_button.Size = new Size(80, 24);
+            CameraSettingApply_button.TabIndex = 34;
+            CameraSettingApply_button.Text = "設定適用";
+            CameraSettingApply_button.UseVisualStyleBackColor = true;
             // 
-            // VirtualLens2_groupBox
+            // CameraSetting_groupBox
             // 
-            VirtualLens2_groupBox.Controls.Add(VirtualLens2_Exposure_textBox);
-            VirtualLens2_groupBox.Controls.Add(VirtualLens2_Exposure_label);
-            VirtualLens2_groupBox.Controls.Add(VirtualLens2_FocalLength_textBox);
-            VirtualLens2_groupBox.Controls.Add(VirtualLens2_FocalLength_label);
-            VirtualLens2_groupBox.Controls.Add(VirtualLens2_Aperture_textBox);
-            VirtualLens2_groupBox.Controls.Add(VirtualLens2_Aperture_label);
-            VirtualLens2_groupBox.Location = new Point(3, 132);
-            VirtualLens2_groupBox.Name = "VirtualLens2_groupBox";
-            VirtualLens2_groupBox.Size = new Size(374, 49);
-            VirtualLens2_groupBox.TabIndex = 23;
-            VirtualLens2_groupBox.TabStop = false;
-            VirtualLens2_groupBox.Text = "VirtualLens2";
-            VirtualLens2_groupBox.Enter += VirtualLens2_groupBox_Enter;
+            CameraSetting_groupBox.Controls.Add(groupBox1);
+            CameraSetting_groupBox.Controls.Add(VirtualLens2_groupBox);
+            CameraSetting_groupBox.Controls.Add(useCamera_checkBox);
+            CameraSetting_groupBox.Controls.Add(useCamera_groupBox);
+            CameraSetting_groupBox.Location = new Point(1, 38);
+            CameraSetting_groupBox.Name = "CameraSetting_groupBox";
+            CameraSetting_groupBox.Size = new Size(376, 231);
+            CameraSetting_groupBox.TabIndex = 35;
+            CameraSetting_groupBox.TabStop = false;
+            CameraSetting_groupBox.Text = "カメラギミックOSC初期値";
             // 
-            // modeVirtualLens2_radioButton
+            // cameraSettomg_checkBox
             // 
-            modeVirtualLens2_radioButton.AutoSize = true;
-            modeVirtualLens2_radioButton.Location = new Point(6, 17);
-            modeVirtualLens2_radioButton.Name = "modeVirtualLens2_radioButton";
-            modeVirtualLens2_radioButton.Size = new Size(89, 19);
-            modeVirtualLens2_radioButton.TabIndex = 24;
-            modeVirtualLens2_radioButton.TabStop = true;
-            modeVirtualLens2_radioButton.Text = "VirtualLens2";
-            modeVirtualLens2_radioButton.UseVisualStyleBackColor = true;
-            // 
-            // modeIntegral_radioButton
-            // 
-            modeIntegral_radioButton.AutoSize = true;
-            modeIntegral_radioButton.Location = new Point(101, 17);
-            modeIntegral_radioButton.Name = "modeIntegral_radioButton";
-            modeIntegral_radioButton.Size = new Size(65, 19);
-            modeIntegral_radioButton.TabIndex = 25;
-            modeIntegral_radioButton.TabStop = true;
-            modeIntegral_radioButton.Text = "Integral";
-            modeIntegral_radioButton.UseVisualStyleBackColor = true;
-            // 
-            // useCamera_checkBox
-            // 
-            useCamera_checkBox.AutoSize = true;
-            useCamera_checkBox.Location = new Point(8, 49);
-            useCamera_checkBox.Name = "useCamera_checkBox";
-            useCamera_checkBox.Size = new Size(161, 19);
-            useCamera_checkBox.TabIndex = 26;
-            useCamera_checkBox.Text = "カメラを最初から起動しておく";
-            useCamera_checkBox.UseVisualStyleBackColor = true;
-            useCamera_checkBox.CheckedChanged += checkBox1_CheckedChanged;
-            // 
-            // useCamera_groupBox
-            // 
-            useCamera_groupBox.Controls.Add(modeVirtualLens2_radioButton);
-            useCamera_groupBox.Controls.Add(modeIntegral_radioButton);
-            useCamera_groupBox.Location = new Point(3, 74);
-            useCamera_groupBox.Name = "useCamera_groupBox";
-            useCamera_groupBox.Size = new Size(374, 42);
-            useCamera_groupBox.TabIndex = 24;
-            useCamera_groupBox.TabStop = false;
-            useCamera_groupBox.Text = "カメラ初期起動設定";
-            // 
-            // VirtualLens2_Aperture_label
-            // 
-            VirtualLens2_Aperture_label.AutoSize = true;
-            VirtualLens2_Aperture_label.CausesValidation = false;
-            VirtualLens2_Aperture_label.Font = new Font("Yu Gothic UI", 9F);
-            VirtualLens2_Aperture_label.Location = new Point(6, 20);
-            VirtualLens2_Aperture_label.Name = "VirtualLens2_Aperture_label";
-            VirtualLens2_Aperture_label.Size = new Size(30, 15);
-            VirtualLens2_Aperture_label.TabIndex = 27;
-            VirtualLens2_Aperture_label.Text = "絞り:";
-            VirtualLens2_Aperture_label.Click += label4_Click_3;
-            // 
-            // VirtualLens2_Aperture_textBox
-            // 
-            VirtualLens2_Aperture_textBox.Location = new Point(40, 16);
-            VirtualLens2_Aperture_textBox.Name = "VirtualLens2_Aperture_textBox";
-            VirtualLens2_Aperture_textBox.Size = new Size(55, 23);
-            VirtualLens2_Aperture_textBox.TabIndex = 28;
-            // 
-            // VirtualLens2_FocalLength_textBox
-            // 
-            VirtualLens2_FocalLength_textBox.Location = new Point(135, 16);
-            VirtualLens2_FocalLength_textBox.Name = "VirtualLens2_FocalLength_textBox";
-            VirtualLens2_FocalLength_textBox.Size = new Size(55, 23);
-            VirtualLens2_FocalLength_textBox.TabIndex = 30;
-            VirtualLens2_FocalLength_textBox.TextChanged += this.textBox2_TextChanged;
-            // 
-            // VirtualLens2_FocalLength_label
-            // 
-            VirtualLens2_FocalLength_label.AutoSize = true;
-            VirtualLens2_FocalLength_label.CausesValidation = false;
-            VirtualLens2_FocalLength_label.Font = new Font("Yu Gothic UI", 9F);
-            VirtualLens2_FocalLength_label.Location = new Point(101, 19);
-            VirtualLens2_FocalLength_label.Name = "VirtualLens2_FocalLength_label";
-            VirtualLens2_FocalLength_label.Size = new Size(36, 15);
-            VirtualLens2_FocalLength_label.TabIndex = 29;
-            VirtualLens2_FocalLength_label.Text = "ズーム:";
-            VirtualLens2_FocalLength_label.Click += label5_Click;
-            // 
-            // VirtualLens2_Exposure_textBox
-            // 
-            VirtualLens2_Exposure_textBox.Location = new Point(236, 16);
-            VirtualLens2_Exposure_textBox.Name = "VirtualLens2_Exposure_textBox";
-            VirtualLens2_Exposure_textBox.Size = new Size(55, 23);
-            VirtualLens2_Exposure_textBox.TabIndex = 32;
-            // 
-            // VirtualLens2_Exposure_label
-            // 
-            VirtualLens2_Exposure_label.AutoSize = true;
-            VirtualLens2_Exposure_label.CausesValidation = false;
-            VirtualLens2_Exposure_label.Font = new Font("Yu Gothic UI", 9F);
-            VirtualLens2_Exposure_label.Location = new Point(196, 19);
-            VirtualLens2_Exposure_label.Name = "VirtualLens2_Exposure_label";
-            VirtualLens2_Exposure_label.Size = new Size(34, 15);
-            VirtualLens2_Exposure_label.TabIndex = 31;
-            VirtualLens2_Exposure_label.Text = "露出:";
-            // 
-            // groupBox1
-            // 
-            groupBox1.Controls.Add(textBox4);
-            groupBox1.Controls.Add(label7);
-            groupBox1.Controls.Add(textBox3);
-            groupBox1.Controls.Add(label6);
-            groupBox1.Controls.Add(Integral_Exposure_textBox);
-            groupBox1.Controls.Add(Integral_Aperture_textBox);
-            groupBox1.Controls.Add(Integral_Exposure_label);
-            groupBox1.Controls.Add(Integral_Aperture_label);
-            groupBox1.Controls.Add(Integral_FocalLength_textBox);
-            groupBox1.Controls.Add(Integral_FocalLength_label);
-            groupBox1.Location = new Point(3, 187);
-            groupBox1.Name = "groupBox1";
-            groupBox1.Size = new Size(374, 78);
-            groupBox1.TabIndex = 33;
-            groupBox1.TabStop = false;
-            groupBox1.Text = "Integral";
-            // 
-            // Integral_Aperture_textBox
-            // 
-            Integral_Aperture_textBox.Location = new Point(37, 16);
-            Integral_Aperture_textBox.Name = "Integral_Aperture_textBox";
-            Integral_Aperture_textBox.Size = new Size(55, 23);
-            Integral_Aperture_textBox.TabIndex = 28;
-            // 
-            // Integral_Aperture_label
-            // 
-            Integral_Aperture_label.AutoSize = true;
-            Integral_Aperture_label.CausesValidation = false;
-            Integral_Aperture_label.Font = new Font("Yu Gothic UI", 9F);
-            Integral_Aperture_label.Location = new Point(6, 20);
-            Integral_Aperture_label.Name = "Integral_Aperture_label";
-            Integral_Aperture_label.Size = new Size(30, 15);
-            Integral_Aperture_label.TabIndex = 27;
-            Integral_Aperture_label.Text = "絞り:";
-            // 
-            // Integral_Exposure_textBox
-            // 
-            Integral_Exposure_textBox.Location = new Point(228, 17);
-            Integral_Exposure_textBox.Name = "Integral_Exposure_textBox";
-            Integral_Exposure_textBox.Size = new Size(55, 23);
-            Integral_Exposure_textBox.TabIndex = 36;
-            // 
-            // Integral_Exposure_label
-            // 
-            Integral_Exposure_label.AutoSize = true;
-            Integral_Exposure_label.CausesValidation = false;
-            Integral_Exposure_label.Font = new Font("Yu Gothic UI", 9F);
-            Integral_Exposure_label.Location = new Point(193, 20);
-            Integral_Exposure_label.Name = "Integral_Exposure_label";
-            Integral_Exposure_label.Size = new Size(34, 15);
-            Integral_Exposure_label.TabIndex = 35;
-            Integral_Exposure_label.Text = "露出:";
-            // 
-            // Integral_FocalLength_textBox
-            // 
-            Integral_FocalLength_textBox.Location = new Point(132, 17);
-            Integral_FocalLength_textBox.Name = "Integral_FocalLength_textBox";
-            Integral_FocalLength_textBox.Size = new Size(55, 23);
-            Integral_FocalLength_textBox.TabIndex = 34;
-            // 
-            // Integral_FocalLength_label
-            // 
-            Integral_FocalLength_label.AutoSize = true;
-            Integral_FocalLength_label.CausesValidation = false;
-            Integral_FocalLength_label.Font = new Font("Yu Gothic UI", 9F);
-            Integral_FocalLength_label.Location = new Point(98, 20);
-            Integral_FocalLength_label.Name = "Integral_FocalLength_label";
-            Integral_FocalLength_label.Size = new Size(36, 15);
-            Integral_FocalLength_label.TabIndex = 33;
-            Integral_FocalLength_label.Text = "ズーム:";
-            // 
-            // textBox3
-            // 
-            textBox3.Location = new Point(99, 46);
-            textBox3.Name = "textBox3";
-            textBox3.Size = new Size(55, 23);
-            textBox3.TabIndex = 38;
-            // 
-            // label6
-            // 
-            label6.AutoSize = true;
-            label6.CausesValidation = false;
-            label6.Font = new Font("Yu Gothic UI", 9F);
-            label6.Location = new Point(6, 49);
-            label6.Name = "label6";
-            label6.Size = new Size(87, 15);
-            label6.TabIndex = 37;
-            label6.Text = "シャッタースピード:";
-            // 
-            // textBox4
-            // 
-            textBox4.Location = new Point(230, 46);
-            textBox4.Name = "textBox4";
-            textBox4.Size = new Size(55, 23);
-            textBox4.TabIndex = 40;
-            // 
-            // label7
-            // 
-            label7.AutoSize = true;
-            label7.CausesValidation = false;
-            label7.Font = new Font("Yu Gothic UI", 9F);
-            label7.Location = new Point(160, 49);
-            label7.Name = "label7";
-            label7.Size = new Size(64, 15);
-            label7.TabIndex = 39;
-            label7.Text = "ボケシェイプ:";
+            cameraSettomg_checkBox.AutoSize = true;
+            cameraSettomg_checkBox.Location = new Point(3, 18);
+            cameraSettomg_checkBox.Name = "cameraSettomg_checkBox";
+            cameraSettomg_checkBox.Size = new Size(213, 19);
+            cameraSettomg_checkBox.TabIndex = 36;
+            cameraSettomg_checkBox.Text = "VL2,Integral等のギミックを利用している";
+            toolTip1.SetToolTip(cameraSettomg_checkBox, "カメラギミックを利用している場合はチェックを入れて下さい\r\nVRChat起動時にカメラの初期値をこちらで上書きします。");
+            cameraSettomg_checkBox.UseVisualStyleBackColor = true;
             // 
             // VSA_launcher
             // 
@@ -924,14 +955,16 @@
             ((System.ComponentModel.ISupportInitialize)PngPreview_pictureBox).EndInit();
             CameraSettings.ResumeLayout(false);
             CameraSettings.PerformLayout();
-            LICENSE.ResumeLayout(false);
-            LICENSE.PerformLayout();
-            VirtualLens2_groupBox.ResumeLayout(false);
-            VirtualLens2_groupBox.PerformLayout();
-            useCamera_groupBox.ResumeLayout(false);
-            useCamera_groupBox.PerformLayout();
             groupBox1.ResumeLayout(false);
             groupBox1.PerformLayout();
+            useCamera_groupBox.ResumeLayout(false);
+            useCamera_groupBox.PerformLayout();
+            VirtualLens2_groupBox.ResumeLayout(false);
+            VirtualLens2_groupBox.PerformLayout();
+            LICENSE.ResumeLayout(false);
+            LICENSE.PerformLayout();
+            CameraSetting_groupBox.ResumeLayout(false);
+            CameraSetting_groupBox.PerformLayout();
             ResumeLayout(false);
             PerformLayout();
         }
@@ -1022,5 +1055,9 @@
         private Label Integral_Exposure_label;
         private TextBox Integral_FocalLength_textBox;
         private Label Integral_FocalLength_label;
+        private Button CameraSettingApply_button;
+        private GroupBox CameraSetting_groupBox;
+        private CheckBox cameraSettomg_checkBox;
+        private ToolTip toolTip1;
     }
 }

@@ -14,19 +14,58 @@ namespace VSA_launcher
         {
             try
             {
+                AppSettings settings;
+                
                 if (File.Exists(SettingsFilePath))
                 {
                     string json = File.ReadAllText(SettingsFilePath);
-                    return JsonConvert.DeserializeObject<AppSettings>(json) ?? new AppSettings();
+                    settings = JsonConvert.DeserializeObject<AppSettings>(json) ?? new AppSettings();
                 }
+                else
+                {
+                    settings = new AppSettings();
+                }
+
+                // カメラ設定の補完
+                EnsureCameraSettingsComplete(settings);
+                
+                // 設定ファイルを更新（デフォルト値で補完された場合）
+                SaveSettings(settings);
+                
+                return settings;
             }
             catch (Exception ex)
             {
                 // 読み込みエラー時はログに記録
                 Console.WriteLine($"設定ファイルの読み込みエラー: {ex.Message}");
+                var defaultSettings = new AppSettings();
+                EnsureCameraSettingsComplete(defaultSettings);
+                return defaultSettings;
+            }
+        }
+
+        /// <summary>
+        /// カメラ設定が不完全な場合にデフォルト値で補完
+        /// </summary>
+        private static void EnsureCameraSettingsComplete(AppSettings settings)
+        {
+            // CameraSettingsがnullの場合は新規作成
+            if (settings.CameraSettings == null)
+            {
+                settings.CameraSettings = new CameraSettings();
             }
 
-            return new AppSettings();
+            // VirtualLens2設定の補完
+            if (settings.CameraSettings.VirtualLens2 == null)
+            {
+                settings.CameraSettings.VirtualLens2 = new VirtualLens2Settings();
+            }
+
+            // Integral設定の補完
+            if (settings.CameraSettings.Integral == null)
+            {
+                settings.CameraSettings.Integral = new IntegralSettings();
+            }
         }
 
         public static void SaveSettings(AppSettings settings)

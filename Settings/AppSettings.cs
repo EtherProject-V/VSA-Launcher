@@ -14,6 +14,7 @@ namespace VSA_launcher
         public Compression Compression { get; set; } = new Compression();
         public Performance Performance { get; set; } = new Performance();
         public LauncherSettings LauncherSettings { get; set; } = new LauncherSettings();
+        public CameraSettings CameraSettings { get; set; } = new CameraSettings();
     }
 
     public class FolderStructureSettings
@@ -213,5 +214,28 @@ namespace VSA_launcher
                 _sequenceCounters.Clear();
             }
         }
+    }
+
+    public class CameraSettings
+    {
+        public bool Enabled { get; set; } = false;
+        public VirtualLens2Settings VirtualLens2 { get; set; } = new VirtualLens2Settings();
+        public IntegralSettings Integral { get; set; } = new IntegralSettings();
+    }
+
+    public class VirtualLens2Settings
+    {
+        public int Aperture { get; set; } = 0;     // appsettings.jsonに合わせて0に変更
+        public int FocalLength { get; set; } = 35; // appsettings.jsonに合わせて35に変更
+        public int Exposure { get; set; } = 50;
+    }
+
+    public class IntegralSettings
+    {
+        public int Aperture { get; set; } = 50;
+        public int FocalLength { get; set; } = 50;
+        public int Exposure { get; set; } = 50;
+        public int ShutterSpeed { get; set; } = 50;
+        public int BokehShape { get; set; } = 50;
     }
 }
