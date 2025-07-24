@@ -18,15 +18,14 @@ namespace VSA_launcher.OSCServer
         private const string VRC_IP_ADDRESS = "127.0.0.1";
         private const int VRC_SENDER_PORT = 9000;
         
-        private readonly int _port;
         private OscSender? _oscSender;
         private CancellationToken _cancellationToken;
         private OSCQueryService? _oscQueryService;
         private OscDataStore _dataStore;
 
-        public IntegralOscServer(int port, CancellationToken cancellationToken, OscDataStore dataStore, OSCQueryService oscQueryService)
+        public IntegralOscServer(int unusedPort, CancellationToken cancellationToken, OscDataStore dataStore, OSCQueryService oscQueryService)
         {
-            _port = port;
+            // unusedPortは互換性のため残すが使用しない（将来的に削除予定）
             _cancellationToken = cancellationToken;
             _dataStore = dataStore;
             _oscQueryService = oscQueryService;
@@ -43,10 +42,12 @@ namespace VSA_launcher.OSCServer
                 _oscSender = new OscSender(address, VRC_SENDER_PORT);
                 _oscSender.Connect();
 
+                Console.WriteLine($"[OSC送信] Integral OSC Sender started - Target: {VRC_IP_ADDRESS}:{VRC_SENDER_PORT}");
                 Debug.WriteLine($"Integral OSC Sender started - Target: {VRC_IP_ADDRESS}:{VRC_SENDER_PORT}");
             }
             catch (Exception ex)
             {
+                Console.WriteLine($"[OSCエラー] Integral OSC Sender start error: {ex.Message}");
                 Debug.WriteLine($"Integral OSC Sender start error: {ex.Message}");
             }
         }
@@ -65,10 +66,12 @@ namespace VSA_launcher.OSCServer
                 string address = $"/avatar/parameters/{parameterName}";
                 var message = new OscMessage(address, value);
                 _oscSender.Send(message);
+                Console.WriteLine($"[OSC送信] Integral: {address} = {value}");
                 Debug.WriteLine($"Sent Integral parameter: {address} = {value}");
             }
             catch (Exception ex)
             {
+                Console.WriteLine($"[OSCエラー] Integral送信失敗 {parameterName}: {ex.Message}");
                 Debug.WriteLine($"Failed to send Integral parameter {parameterName}: {ex.Message}");
             }
         }
@@ -91,6 +94,7 @@ namespace VSA_launcher.OSCServer
         {
             if (_oscQueryService == null) return;
 
+            _oscQueryService.AddEndpoint<bool>("/avatar/parameters/Integral_Enable", Attributes.AccessValues.WriteOnly);
             _oscQueryService.AddEndpoint<float>("/avatar/parameters/Integral_Aperture", Attributes.AccessValues.WriteOnly);
             _oscQueryService.AddEndpoint<float>("/avatar/parameters/Integral_Zoom", Attributes.AccessValues.WriteOnly);
             _oscQueryService.AddEndpoint<float>("/avatar/parameters/Integral_Exposure", Attributes.AccessValues.WriteOnly);

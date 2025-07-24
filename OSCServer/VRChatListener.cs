@@ -44,10 +44,12 @@ namespace VSA_launcher.OSCServer
                 // 1秒ごとの定期リッスンタスクを開始
                 _periodicListenTask = Task.Run(() => PeriodicListenLoop(_listenerCancelTokenSource.Token));
                 
+                Console.WriteLine($"[OSC受信] VRChat OSC Listener started on port {VRC_RECEIVER_PORT}");
                 Debug.WriteLine($"VRChat OSC Listener started on port {VRC_RECEIVER_PORT}");
             }
             catch (Exception ex)
             {
+                Console.WriteLine($"[OSCエラー] VRChat OSC Listener start error: {ex.Message}");
                 Debug.WriteLine($"VRChat OSC Listener start error: {ex.Message}");
             }
         }
@@ -58,6 +60,7 @@ namespace VSA_launcher.OSCServer
             {
                 _receiver = new OscReceiver(VRC_RECEIVER_PORT);
                 _receiver.Connect();
+                Console.WriteLine($"[OSC受信] OSC Receiver connected on port {VRC_RECEIVER_PORT}");
                 
                 while (!token.IsCancellationRequested)
                 {
@@ -71,9 +74,11 @@ namespace VSA_launcher.OSCServer
             catch (OperationCanceledException)
             {
                 // キャンセル時は正常終了
+                Console.WriteLine("[OSC受信] OSC Listener stopped by cancellation");
             }
             catch (Exception ex)
             {
+                Console.WriteLine($"[OSCエラー] VRChat OSC Listener error: {ex.Message}");
                 Debug.WriteLine($"VRChat OSC Listener error: {ex.Message}");
             }
             finally
@@ -113,7 +118,14 @@ namespace VSA_launcher.OSCServer
         {
             if (!(packet is OscMessage message)) return;
 
-            // 新しいアドレスを発見した場合のみログ出力
+            // 全てのOSC受信をコンソールログに出力
+            Console.WriteLine($"[OSC受信] {DateTime.Now:HH:mm:ss.fff} - {message.Address}");
+            if (message.Count > 0)
+            {
+                Console.WriteLine($"           値: {message[0]}");
+            }
+
+            // 新しいアドレスを発見した場合のみデバッグログ出力
             bool isNewAddress = _discoveredAddresses.Add(message.Address);
             if (isNewAddress)
             {
@@ -140,6 +152,7 @@ namespace VSA_launcher.OSCServer
                             _ => false
                         };
                         _dataStore.IsIntegralActive = enabled;
+                        Console.WriteLine($"[OSC更新] Integral_Enable: {enabled}");
                         Debug.WriteLine($"Integral_Enable updated: {enabled}");
                     }
                     break;
@@ -148,6 +161,7 @@ namespace VSA_launcher.OSCServer
                     if (message.Count > 0 && message[0] is float aperture)
                     {
                         _dataStore.Integral_Aperture = aperture;
+                        Console.WriteLine($"[OSC更新] Integral_Aperture: {aperture}");
                         Debug.WriteLine($"Integral_Aperture updated: {aperture}");
                     }
                     break;
@@ -157,6 +171,7 @@ namespace VSA_launcher.OSCServer
                     if (message.Count > 0 && message[0] is float focalLength)
                     {
                         _dataStore.Integral_FocalLength = focalLength;
+                        Console.WriteLine($"[OSC更新] Integral_FocalLength: {focalLength}");
                         Debug.WriteLine($"Integral_FocalLength updated: {focalLength}");
                     }
                     break;
@@ -165,6 +180,7 @@ namespace VSA_launcher.OSCServer
                     if (message.Count > 0 && message[0] is float exposure)
                     {
                         _dataStore.Integral_Exposure = exposure;
+                        Console.WriteLine($"[OSC更新] Integral_Exposure: {exposure}");
                         Debug.WriteLine($"Integral_Exposure updated: {exposure}");
                     }
                     break;
@@ -173,6 +189,7 @@ namespace VSA_launcher.OSCServer
                     if (message.Count > 0 && message[0] is float shutterSpeed)
                     {
                         _dataStore.Integral_ShutterSpeed = shutterSpeed;
+                        Console.WriteLine($"[OSC更新] Integral_ShutterSpeed: {shutterSpeed}");
                         Debug.WriteLine($"Integral_ShutterSpeed updated: {shutterSpeed}");
                     }
                     break;
@@ -188,6 +205,7 @@ namespace VSA_launcher.OSCServer
                             _ => 0
                         };
                         _dataStore.Integral_BokehShape = bokehShape;
+                        Console.WriteLine($"[OSC更新] Integral_BokehShape: {bokehShape}");
                         Debug.WriteLine($"Integral_BokehShape updated: {bokehShape}");
                     }
                     break;
@@ -204,6 +222,7 @@ namespace VSA_launcher.OSCServer
                             _ => false
                         };
                         _dataStore.IsVirtualLens2Active = enabled;
+                        Console.WriteLine($"[OSC更新] VirtualLens2_Enable: {enabled}");
                         Debug.WriteLine($"VirtualLens2_Enable updated: {enabled}");
                     }
                     break;
@@ -212,6 +231,7 @@ namespace VSA_launcher.OSCServer
                     if (message.Count > 0 && message[0] is float vl2Aperture)
                     {
                         _dataStore.VirtualLens2_Aperture = vl2Aperture;
+                        Console.WriteLine($"[OSC更新] VirtualLens2_Aperture: {vl2Aperture}");
                         Debug.WriteLine($"VirtualLens2_Aperture updated: {vl2Aperture}");
                     }
                     break;
@@ -221,6 +241,7 @@ namespace VSA_launcher.OSCServer
                     if (message.Count > 0 && message[0] is float vl2FocalLength)
                     {
                         _dataStore.VirtualLens2_FocalLength = vl2FocalLength;
+                        Console.WriteLine($"[OSC更新] VirtualLens2_FocalLength: {vl2FocalLength}");
                         Debug.WriteLine($"VirtualLens2_FocalLength updated: {vl2FocalLength}");
                     }
                     break;
@@ -229,6 +250,7 @@ namespace VSA_launcher.OSCServer
                     if (message.Count > 0 && message[0] is float vl2Exposure)
                     {
                         _dataStore.VirtualLens2_Exposure = vl2Exposure;
+                        Console.WriteLine($"[OSC更新] VirtualLens2_Exposure: {vl2Exposure}");
                         Debug.WriteLine($"VirtualLens2_Exposure updated: {vl2Exposure}");
                     }
                     break;

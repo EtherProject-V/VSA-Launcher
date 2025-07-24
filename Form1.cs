@@ -38,11 +38,14 @@ namespace VSA_launcher
         private VRChatListener _vrchatListener = null!; // VRChatからの受信用リスナー
         private CancellationTokenSource _cancellationTokenSource = null!;
         private OSCQueryService? _oscQueryService;
+        private OSCParameterSender? _oscParameterSender; // OSC送信専用クラス
 
         // VRChat監視用
         private System.Windows.Forms.Timer _vrchatMonitorTimer = null!;
         private bool _isVRChatRunning = false;
         private bool _hasInitializedCamera = false; // カメラ初期化済みフラグ
+        private bool _cameraSettingsApplied = false; // カメラ設定適用済みフラグ
+        private bool _hasExecutedOscInitialization = false; // アプリセッション中のOSC初期化実行フラグ
 
         // 設定ファイルから読み込んだスタートアップ設定
         private bool _startWithWindows = false;
@@ -76,19 +79,26 @@ namespace VSA_launcher
                     .AdvertiseOSCQuery()
                     .Build();
 
-                // VRChatからの受信用リスナーを開始
+                // OSC設定に基づいてVRChatからの受信用リスナーを開始
                 _vrchatListener = new OSCServer.VRChatListener(_oscDataStore);
                 _vrchatListener.Start();
+                Console.WriteLine($"[OSC初期化] VRChat OSC Listener started - 受信ポート: {_settings.LauncherSettings.OSCSettings.ReceiverPort}");
                 System.Diagnostics.Debug.WriteLine("VRChat OSC Listener started on port 9001");
 
                 // 送信専用のOSCサーバーを初期化
-                _integralOscServer = new OSCServer.IntegralOscServer(_settings.LauncherSettings.IntegralOscPort, _cancellationTokenSource.Token, _oscDataStore, _oscQueryService);
+                _integralOscServer = new OSCServer.IntegralOscServer(_settings.LauncherSettings.OSCSettings.SenderPort, _cancellationTokenSource.Token, _oscDataStore, _oscQueryService);
                 _integralOscServer.Start();
+                Console.WriteLine($"[OSC初期化] Integral OSC Sender started - 送信先: 127.0.0.1:{_settings.LauncherSettings.OSCSettings.SenderPort}");
                 System.Diagnostics.Debug.WriteLine($"Integral OSC Sender started - Target: 127.0.0.1:9000");
 
-                _virtualLens2OscServer = new OSCServer.VirtualLens2OscServer(_settings.LauncherSettings.VirtualLens2OscPort, _cancellationTokenSource.Token, _oscDataStore, _oscQueryService);
+                _virtualLens2OscServer = new OSCServer.VirtualLens2OscServer(_settings.LauncherSettings.OSCSettings.SenderPort, _cancellationTokenSource.Token, _oscDataStore, _oscQueryService);
                 _virtualLens2OscServer.Start();
+                Console.WriteLine($"[OSC初期化] VirtualLens2 OSC Sender started - 送信先: 127.0.0.1:{_settings.LauncherSettings.OSCSettings.SenderPort}");
                 System.Diagnostics.Debug.WriteLine($"VirtualLens2 OSC Sender started - Target: 127.0.0.1:9000");
+
+                // OSCParameterSenderを初期化
+                _oscParameterSender = new OSCServer.OSCParameterSender(_integralOscServer, _virtualLens2OscServer, _oscDataStore, _settings);
+                Console.WriteLine("[OSC初期化] OSCParameterSender initialized");
 
                 _systemTrayIcon = new SystemTrayIcon(this, notifyIcon, contextMenuStrip1);
 
@@ -659,6 +669,7 @@ namespace VSA_launcher
                 _virtualLens2OscServer?.Dispose();
                 _cancellationTokenSource?.Dispose();
                 _oscQueryService?.Dispose(); // 追加
+                _oscParameterSender = null; // OSCParameterSenderをnull化
                 components?.Dispose();
             }
             base.Dispose(disposing);
@@ -1136,14 +1147,37 @@ namespace VSA_launcher
                     UpdateVRChatStatusLabel();
                 }
 
-                // VRChat起動時のカメラ初期化
+                // VRChat起動時のOSC初期化（新しいロジック）
+                if (_isVRChatRunning && !_hasExecutedOscInitialization)
+                {
+                    // cameraSettomg_checkBoxがtrueかつ設定適用済みの場合のみ実行
+                    if ((cameraSettomg_checkBox?.Checked == true) && _cameraSettingsApplied)
+                    {
+                        Console.WriteLine("[VRChat検知] VRChat起動検知 - 2分後にOSC初期化を実行します");
+                        _hasExecutedOscInitialization = true; // アプリセッション中1回だけのフラグ
+                        
+                        // 2分後にOSC初期化を実行
+                        _ = Task.Run(async () =>
+                        {
+                            await Task.Delay(TimeSpan.FromMinutes(2));
+                            await ExecuteOscCameraInitialization();
+                        });
+                    }
+                    else
+                    {
+                        // 条件を満たさない場合はログ出力のみ
+                        Console.WriteLine($"[VRChat検知] OSC初期化条件未達成 - カメラ設定有効: {cameraSettomg_checkBox?.Checked}, 設定適用済み: {_cameraSettingsApplied}");
+                    }
+                }
+
+                // VRChat起動時の従来のカメラ初期化（互換性のため残す）
                 if (_isVRChatRunning && !_hasInitializedCamera)
                 {
                     Task.Run(async () => await InitializeCameraParametersAsync());
                 }
                 else if (!_isVRChatRunning)
                 {
-                    // VRChat終了時にフラグをリセット
+                    // VRChat終了時にフラグをリセット（従来のフラグのみ、セッション用フラグはリセットしない）
                     _hasInitializedCamera = false;
                 }
             }
@@ -1382,13 +1416,13 @@ namespace VSA_launcher
                 }
 
                 // IntegralのShutterSpeedとBokehShapeも初期化
-                if (textBox4 != null && float.TryParse(textBox4.Text, out float shutterSpeed))
+                if (Integral_BokeShape_textBox != null && float.TryParse(Integral_BokeShape_textBox.Text, out float shutterSpeed))
                 {
                     _integralOscServer?.SendParameter("Integral_ShutterSpeed", shutterSpeed / 100.0f);
                     await Task.Delay(100);
                 }
 
-                if (textBox3 != null && float.TryParse(textBox3.Text, out float bokehShape))
+                if (Integral_ShutterSpeed_textBox != null && float.TryParse(Integral_ShutterSpeed_textBox.Text, out float bokehShape))
                 {
                     // BokehShapeは整数値として送信
                     _integralOscServer?.SendParameter("Integral_BokehShape", (int)(bokehShape / 100.0f * 10)); // 0-10の範囲と仮定
@@ -1416,10 +1450,20 @@ namespace VSA_launcher
                 // 設定ファイルに書き込み
                 SettingsManager.SaveSettings(_settings);
 
+                // 設定適用フラグを設定
+                _cameraSettingsApplied = true;
+
                 // 成功メッセージ
                 UpdateStatusInfo("設定保存完了", "カメラ設定がappsettings.jsonに保存されました");
                 
                 MessageBox.Show("カメラ設定を保存しました。", "保存完了", MessageBoxButtons.OK, MessageBoxIcon.Information);
+
+                // VRChatが起動中で、cameraSettomg_checkBoxがtrueの場合、即座にOSC送信を実行
+                if (_isVRChatRunning && (cameraSettomg_checkBox?.Checked == true))
+                {
+                    Console.WriteLine("[カメラ設定] VRChat起動中のため、即座にOSC送信を実行");
+                    _ = Task.Run(async () => await ExecuteOscCameraInitialization());
+                }
             }
             catch (Exception ex)
             {
@@ -1463,11 +1507,11 @@ namespace VSA_launcher
             {
                 _settings.CameraSettings.Integral.Exposure = Math.Max(0, Math.Min(100, intExposure));
             }
-            if (int.TryParse(textBox4?.Text, out int intShutterSpeed))
+            if (int.TryParse(Integral_BokeShape_textBox?.Text, out int intShutterSpeed))
             {
                 _settings.CameraSettings.Integral.ShutterSpeed = Math.Max(0, Math.Min(100, intShutterSpeed));
             }
-            if (int.TryParse(textBox3?.Text, out int intBokehShape))
+            if (int.TryParse(Integral_ShutterSpeed_textBox?.Text, out int intBokehShape))
             {
                 _settings.CameraSettings.Integral.BokehShape = Math.Max(0, Math.Min(100, intBokehShape));
             }
@@ -1534,13 +1578,13 @@ namespace VSA_launcher
                 {
                     Integral_Exposure_textBox.Text = _settings.CameraSettings.Integral.Exposure.ToString();
                 }
-                if (textBox4 != null)
+                if (Integral_BokeShape_textBox != null)
                 {
-                    textBox4.Text = _settings.CameraSettings.Integral.ShutterSpeed.ToString();
+                    Integral_BokeShape_textBox.Text = _settings.CameraSettings.Integral.ShutterSpeed.ToString();
                 }
-                if (textBox3 != null)
+                if (Integral_ShutterSpeed_textBox != null)
                 {
-                    textBox3.Text = _settings.CameraSettings.Integral.BokehShape.ToString();
+                    Integral_ShutterSpeed_textBox.Text = _settings.CameraSettings.Integral.BokehShape.ToString();
                 }
 
                 Debug.WriteLine("カメラ設定をUIに読み込み完了");
@@ -1573,16 +1617,40 @@ namespace VSA_launcher
                     Integral_FocalLength_textBox.Text = "50";
                 if (Integral_Exposure_textBox != null)
                     Integral_Exposure_textBox.Text = "50";
-                if (textBox4 != null)
-                    textBox4.Text = "50";
-                if (textBox3 != null)
-                    textBox3.Text = "50";
+                if (Integral_BokeShape_textBox != null)
+                    Integral_BokeShape_textBox.Text = "50";
+                if (Integral_ShutterSpeed_textBox != null)
+                    Integral_ShutterSpeed_textBox.Text = "50";
 
                 Debug.WriteLine("デフォルトカメラ値を設定しました");
             }
             catch (Exception ex)
             {
                 Debug.WriteLine($"デフォルト値設定エラー: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// OSCカメラ初期化処理（2分待機後またはVRChat起動中の設定適用時に実行）
+        /// </summary>
+        private async Task ExecuteOscCameraInitialization()
+        {
+            try
+            {
+                if (_oscParameterSender == null)
+                {
+                    Console.WriteLine("[OSCエラー] OSCParameterSenderが初期化されていません");
+                    return;
+                }
+
+                Console.WriteLine("[OSC初期化] カメラパラメータ初期化を開始します");
+                await _oscParameterSender.InitializeCameraParameters();
+                Console.WriteLine("[OSC初期化] カメラパラメータ初期化が完了しました");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[OSCエラー] OSC初期化エラー: {ex.Message}");
+                Debug.WriteLine($"OSC初期化エラー: {ex.StackTrace}");
             }
         }
 

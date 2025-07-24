@@ -53,8 +53,14 @@ namespace VSA_launcher
     {
         public bool WatchingEnabled { get; set; } = true;
         public bool StartWithWindows { get; set; } = false;
-        public int IntegralOscPort { get; set; } = 9004;
-        public int VirtualLens2OscPort { get; set; } = 9002; // デフォルトポート
+        public OSCSettings OSCSettings { get; set; } = new OSCSettings();
+    }
+
+    public class OSCSettings
+    {
+        public bool Enabled { get; set; } = true;
+        public int ReceiverPort { get; set; } = 9001; // VRChatから受信するポート
+        public int SenderPort { get; set; } = 9000;   // VRChatへ送信するポート
     }
 
     // 拡張機能として使われていた古いクラスはVSA_launcher.Settings名前空間に移動

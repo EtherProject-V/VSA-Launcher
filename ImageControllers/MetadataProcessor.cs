@@ -53,9 +53,7 @@ namespace VSA_launcher
                     { "WorldName", _logParser.CurrentWorldName ?? "Unknown" },
                     { "WorldID", _logParser.CurrentWorldId ?? "Unknown" },
                     { "User", username },  // 'Username'を'User'に変更
-                    { "CaptureTime", DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss") },
-                    { "VSA", "true" }, // 処理済みフラグを追加
-                    { "VSACheck", "true" } // 互換性のためのフラグ
+                    { "CaptureTime", DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss") }
                 };
 
                 metadata["Usernames"] = _logParser.GetFriendsString();
@@ -84,22 +82,43 @@ namespace VSA_launcher
 
                 try
                 {
-                    // 一時ファイルにメタデータを追加して出力先に保存 (常にPngMetadataManagerを使用)
-                    bool success = PngMetadataManager.AddMetadataToPng(tempFilePath, destinationPath, metadata);
+                    // 一時ファイルにメタデータを追加して出力先に保存 (最大3回リトライ)
+                    bool success = false;
+                    int retryCount = 0;
+                    const int maxRetries = 3;
+                    
+                    while (!success && retryCount < maxRetries)
+                    {
+                        retryCount++;
+                        success = PngMetadataManager.AddMetadataToPng(tempFilePath, destinationPath, metadata);
+                        
+                        if (!success)
+                        {
+                            _updateStatusAction("リトライ中", $"{Path.GetFileName(sourceFilePath)}: メタデータ追加 ({retryCount}/{maxRetries})");
+                            if (retryCount < maxRetries)
+                            {
+                                Thread.Sleep(500); // 0.5秒待機してリトライ
+                            }
+                        }
+                        else
+                        {
+                            // メタデータが実際に書き込まれているか検証
+                            if (!VerifyMetadata(destinationPath, metadata))
+                            {
+                                success = false; // 検証失敗時はリトライ
+                                _updateStatusAction("検証失敗", $"{Path.GetFileName(sourceFilePath)}: メタデータ検証失敗 ({retryCount}/{maxRetries})");
+                                if (retryCount < maxRetries)
+                                {
+                                    Thread.Sleep(500);
+                                }
+                            }
+                        }
+                    }
                     
                     if (!success)
                     {
-                        _updateStatusAction("メタデータ追加エラー", $"{Path.GetFileName(sourceFilePath)}: メタデータなしでコピーします");
-                        // メタデータ追加に失敗した場合は単純コピー
+                        _updateStatusAction("メタデータ追加エラー", $"{Path.GetFileName(sourceFilePath)}: {maxRetries}回リトライ後、メタデータなしでコピーします");
                         return SimpleCopy(tempFilePath, destinationPath);
-                    }
-                    
-                    // メタデータが実際に書き込まれているか検証
-                    if (!VerifyMetadata(destinationPath, metadata))
-                    {
-                        _updateStatusAction("メタデータ検証エラー", $"{Path.GetFileName(sourceFilePath)}: メタデータが正しく書き込まれていません");
-                        // 検証失敗の場合でもファイルは作成されているので成功として扱う
-                        Debug.WriteLine($"メタデータ検証失敗: {Path.GetFileName(destinationPath)}");
                     }
                     
                     // 一時ファイルを削除
@@ -145,13 +164,6 @@ namespace VSA_launcher
                     {
                         // ファイルからメタデータを読み取り（PngMetadataManagerを使用）
                         var actualMetadata = PngMetadataManager.ReadMetadata(filePath);
-                        
-                        // 必須キー（VSACheckまたはVSA）が存在するかチェック
-                        if (!actualMetadata.ContainsKey("VSA") && !actualMetadata.ContainsKey("VSACheck"))
-                        {
-                            Debug.WriteLine($"検証エラー: 処理マーカーが見つかりません: {filePath}");
-                            return false;
-                        }
                         
                         // ワールド情報など重要なメタデータが含まれているかチェック
                         string[] essentialKeys = { "WorldName", "WorldID", "CaptureTime" };
