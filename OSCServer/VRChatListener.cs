@@ -11,7 +11,7 @@ namespace VSA_launcher.OSCServer
 {
     /// <summary>
     /// VRChatからのOSCパラメータを受信するリスナークラス
-    /// VRChat標準の9001ポートでリッスンし、1秒ごとに定期的にデータを取得
+    /// VRChat標準の9001ポートでリッスンし、10ミリ秒ごとにメッセージをチェックし、1秒ごとにステータスを出力
     /// </summary>
     public class VRChatListener : IDisposable
     {
@@ -99,8 +99,8 @@ namespace VSA_launcher.OSCServer
                     // 定期的なステータス出力（デバッグ用）
                     if (_discoveredAddresses.Count > 0)
                     {
-                        Debug.WriteLine($"[{DateTime.Now:HH:mm:ss}] VRChat OSC - 発見されたアドレス数: {_discoveredAddresses.Count}");
-                        Debug.WriteLine($"  Integral Active: {_dataStore.IsIntegralActive}, VirtualLens2 Active: {_dataStore.IsVirtualLens2Active}");
+                        Console.WriteLine($"[OSCステータス] [{DateTime.Now:HH:mm:ss}] 発見されたアドレス数: {_discoveredAddresses.Count}");
+                        Console.WriteLine($"[OSCステータス] Integral Active: {_dataStore.IsIntegralActive}, VirtualLens2 Active: {_dataStore.IsVirtualLens2Active}");
                     }
                 }
             }
@@ -110,7 +110,7 @@ namespace VSA_launcher.OSCServer
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"VRChat OSC Periodic Listen error: {ex.Message}");
+                Console.WriteLine($"[OSCエラー] PeriodicListenLoop error: {ex.Message}");
             }
         }
 
