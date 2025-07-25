@@ -33,8 +33,6 @@ namespace VSA_launcher
 
         // OSC関連の追加
         private OscDataStore _oscDataStore = null!;
-        private IntegralOscServer _integralOscServer = null!;
-        private VirtualLens2OscServer _virtualLens2OscServer = null!;
         private VRChatListener _vrchatListener = null!; // VRChatからの受信用リスナー
         private CancellationTokenSource _cancellationTokenSource = null!;
         private OSCQueryService? _oscQueryService;
@@ -85,19 +83,14 @@ namespace VSA_launcher
                 Console.WriteLine($"[OSC初期化] VRChat OSC Listener started - 受信ポート: {_settings.LauncherSettings.OSCSettings.ReceiverPort}");
                 System.Diagnostics.Debug.WriteLine("VRChat OSC Listener started on port 9001");
 
-                // 送信専用のOSCサーバーを初期化
-                _integralOscServer = new OSCServer.IntegralOscServer(_settings.LauncherSettings.OSCSettings.SenderPort, _cancellationTokenSource.Token, _oscDataStore, _oscQueryService);
-                _integralOscServer.Start();
-                Console.WriteLine($"[OSC初期化] Integral OSC Sender started - 送信先: 127.0.0.1:{_settings.LauncherSettings.OSCSettings.SenderPort}");
-                System.Diagnostics.Debug.WriteLine($"Integral OSC Sender started - Target: 127.0.0.1:9000");
-
-                _virtualLens2OscServer = new OSCServer.VirtualLens2OscServer(_settings.LauncherSettings.OSCSettings.SenderPort, _cancellationTokenSource.Token, _oscDataStore, _oscQueryService);
-                _virtualLens2OscServer.Start();
-                Console.WriteLine($"[OSC初期化] VirtualLens2 OSC Sender started - 送信先: 127.0.0.1:{_settings.LauncherSettings.OSCSettings.SenderPort}");
-                System.Diagnostics.Debug.WriteLine($"VirtualLens2 OSC Sender started - Target: 127.0.0.1:9000");
+                // OSCマネージャーを初期化
+                var oscManager = new OSCServer.OscManager(_cancellationTokenSource.Token, _oscDataStore, _oscQueryService);
+                oscManager.Start();
+                oscManager.StartParameterMonitoring();
+                Console.WriteLine($"[OSC初期化] OSC Manager started - 送信先: 127.0.0.1:{_settings.LauncherSettings.OSCSettings.SenderPort}");
 
                 // OSCParameterSenderを初期化
-                _oscParameterSender = new OSCServer.OSCParameterSender(_integralOscServer, _virtualLens2OscServer, _oscDataStore, _settings);
+                _oscParameterSender = new OSCServer.OSCParameterSender(oscManager, _oscDataStore, _settings);
                 Console.WriteLine("[OSC初期化] OSCParameterSender initialized");
 
                 _systemTrayIcon = new SystemTrayIcon(this, notifyIcon, contextMenuStrip1);
@@ -665,8 +658,6 @@ namespace VSA_launcher
                 _systemTrayIcon?.Dispose();
                 _cancellationTokenSource?.Cancel(); // OSCサーバーに停止を通知
                 _vrchatListener?.Dispose(); // VRChatリスナーを
-                _integralOscServer?.Dispose();
-                _virtualLens2OscServer?.Dispose();
                 _cancellationTokenSource?.Dispose();
                 _oscQueryService?.Dispose(); // 追加
                 _oscParameterSender = null; // OSCParameterSenderをnull化
@@ -1350,28 +1341,28 @@ namespace VSA_launcher
         {
             try
             {
-                // Enableパラメータを1→0で送信（OSCを刺激）
-                _virtualLens2OscServer?.SendParameter("VirtualLens2_Enable", 1.0f);
+                // Enableパラメータを有効化
+                _oscParameterSender?.SendCameraEnableParameter(CameraType.VirtualLens2, true);
                 await Task.Delay(100);
-                _virtualLens2OscServer?.SendParameter("VirtualLens2_Enable", 0.0f);
+                _oscParameterSender?.SendCameraEnableParameter(CameraType.VirtualLens2, false);
                 await Task.Delay(100);
 
                 // TextBoxから値を取得して送信（0~100を0~1に変換）
                 if (VirtualLens2_Aperture_textBox != null && float.TryParse(VirtualLens2_Aperture_textBox.Text, out float aperture))
                 {
-                    _virtualLens2OscServer?.SendParameter("VirtualLens2_Aperture", aperture / 100.0f);
+                    _oscParameterSender?.SendVirtualLens2Parameter("VirtualLens2_Aperture", aperture / 100.0f);
                     await Task.Delay(100);
                 }
 
                 if (VirtualLens2_FocalLength_textBox != null && float.TryParse(VirtualLens2_FocalLength_textBox.Text, out float focalLength))
                 {
-                    _virtualLens2OscServer?.SendParameter("VirtualLens2_FocalLength", focalLength / 100.0f);
+                    _oscParameterSender?.SendVirtualLens2Parameter("VirtualLens2_FocalLength", focalLength / 100.0f);
                     await Task.Delay(100);
                 }
 
                 if (VirtualLens2_Exposure_textBox != null && float.TryParse(VirtualLens2_Exposure_textBox.Text, out float exposure))
                 {
-                    _virtualLens2OscServer?.SendParameter("VirtualLens2_Exposure", exposure / 100.0f);
+                    _oscParameterSender?.SendVirtualLens2Parameter("VirtualLens2_Exposure", exposure / 100.0f);
                     await Task.Delay(100);
                 }
 
@@ -1390,42 +1381,42 @@ namespace VSA_launcher
         {
             try
             {
-                // Enableパラメータを1→0で送信（OSCを刺激）
-                _integralOscServer?.SendParameter("Integral_Enable", 1.0f);
+                // Enableパラメータを有効化
+                _oscParameterSender?.SendCameraEnableParameter(CameraType.Integral, true);
                 await Task.Delay(100);
-                _integralOscServer?.SendParameter("Integral_Enable", 0.0f);
+                _oscParameterSender?.SendCameraEnableParameter(CameraType.Integral, false);
                 await Task.Delay(100);
 
                 // TextBoxから値を取得して送信（0~100を0~1に変換）
                 if (Integral_Aperture_textBox != null && float.TryParse(Integral_Aperture_textBox.Text, out float aperture))
                 {
-                    _integralOscServer?.SendParameter("Integral_Aperture", aperture / 100.0f);
+                    _oscParameterSender?.SendIntegralParameter("Integral_Aperture", aperture / 100.0f);
                     await Task.Delay(100);
                 }
 
                 if (Integral_FocalLength_textBox != null && float.TryParse(Integral_FocalLength_textBox.Text, out float focalLength))
                 {
-                    _integralOscServer?.SendParameter("Integral_FocalLength", focalLength / 100.0f);
+                    _oscParameterSender?.SendIntegralParameter("Integral_FocalLength", focalLength / 100.0f);
                     await Task.Delay(100);
                 }
 
                 if (Integral_Exposure_textBox != null && float.TryParse(Integral_Exposure_textBox.Text, out float exposure))
                 {
-                    _integralOscServer?.SendParameter("Integral_Exposure", exposure / 100.0f);
+                    _oscParameterSender?.SendIntegralParameter("Integral_Exposure", exposure / 100.0f);
                     await Task.Delay(100);
                 }
 
                 // IntegralのShutterSpeedとBokehShapeも初期化
                 if (Integral_BokeShape_textBox != null && float.TryParse(Integral_BokeShape_textBox.Text, out float shutterSpeed))
                 {
-                    _integralOscServer?.SendParameter("Integral_ShutterSpeed", shutterSpeed / 100.0f);
+                    _oscParameterSender?.SendIntegralParameter("Integral_ShutterSpeed", shutterSpeed / 100.0f);
                     await Task.Delay(100);
                 }
 
                 if (Integral_ShutterSpeed_textBox != null && float.TryParse(Integral_ShutterSpeed_textBox.Text, out float bokehShape))
                 {
                     // BokehShapeは整数値として送信
-                    _integralOscServer?.SendParameter("Integral_BokehShape", (int)(bokehShape / 100.0f * 10)); // 0-10の範囲と仮定
+                    _oscParameterSender?.SendIntegralParameter("Integral_BokehShape", (int)(bokehShape / 100.0f * 10)); // 0-10の範囲と仮定
                     await Task.Delay(100);
                 }
 

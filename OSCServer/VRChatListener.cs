@@ -60,27 +60,18 @@ namespace VSA_launcher.OSCServer
             {
                 _receiver = new OscReceiver(VRC_RECEIVER_PORT);
                 _receiver.Connect();
-                Console.WriteLine($"[OSC受信] OSC Receiver connected on port {VRC_RECEIVER_PORT}");
-                
+
                 while (!token.IsCancellationRequested)
                 {
-                    if (_receiver.TryReceive(out OscPacket packet))
+                    if (_receiver.TryReceive(out OscPacket packet) && packet is OscMessage)
                     {
+                        // 受信したすべてのメッセージを処理
                         ProcessReceivedPacket(packet);
                     }
-                    await Task.Delay(10, token); // 10ms間隔でチェック
+                    await Task.Delay(10, token);
                 }
             }
-            catch (OperationCanceledException)
-            {
-                // キャンセル時は正常終了
-                Console.WriteLine("[OSC受信] OSC Listener stopped by cancellation");
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"[OSCエラー] VRChat OSC Listener error: {ex.Message}");
-                Debug.WriteLine($"VRChat OSC Listener error: {ex.Message}");
-            }
+            catch (OperationCanceledException) { }
             finally
             {
                 _receiver?.Dispose();

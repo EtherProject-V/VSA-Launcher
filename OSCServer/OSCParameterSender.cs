@@ -10,19 +10,16 @@ namespace VSA_launcher.OSCServer
     /// </summary>
     public class OSCParameterSender
     {
-        private readonly IntegralOscServer _integralOscServer;
-        private readonly VirtualLens2OscServer _virtualLens2OscServer;
+        private readonly OscManager _oscManager;
         private readonly OscDataStore _oscDataStore;
         private readonly AppSettings _settings;
 
         public OSCParameterSender(
-            IntegralOscServer integralOscServer,
-            VirtualLens2OscServer virtualLens2OscServer,
+            OscManager oscManager,
             OscDataStore oscDataStore,
             AppSettings settings)
         {
-            _integralOscServer = integralOscServer ?? throw new ArgumentNullException(nameof(integralOscServer));
-            _virtualLens2OscServer = virtualLens2OscServer ?? throw new ArgumentNullException(nameof(virtualLens2OscServer));
+            _oscManager = oscManager ?? throw new ArgumentNullException(nameof(oscManager));
             _oscDataStore = oscDataStore ?? throw new ArgumentNullException(nameof(oscDataStore));
             _settings = settings ?? throw new ArgumentNullException(nameof(settings));
         }
@@ -60,41 +57,27 @@ namespace VSA_launcher.OSCServer
             {
                 Console.WriteLine("[OSC送信] VirtualLens2パラメータ初期化開始");
 
-                // 1. Enableを無効化（0に設定）
-                await SendVirtualLens2EnableParameter("VirtualLens2_Enable", false);
-                _oscDataStore.IsVirtualLens2Active = false;
-                await Task.Delay(100);
+                // 1. リセット処理
+                await _oscManager.ResetCameraParameters(CameraType.VirtualLens2);
+                await Task.Delay(500);
 
-                // 2. 全パラメータを0に設定
-                await SendVirtualLens2Parameter("VirtualLens2_Aperture", 0.0f);
-                await Task.Delay(100);
-                await SendVirtualLens2Parameter("VirtualLens2_FocalLength", 0.0f);
-                await Task.Delay(100);
-                await SendVirtualLens2Parameter("VirtualLens2_Exposure", 0.0f);
-                await Task.Delay(100);
-
-                // 3. appsettings.jsonの値を送信（0~100を0~1に変換）
+                // 2. appsettings.jsonの値を送信（0~100を0~1に変換）
                 float aperture = _settings.CameraSettings.VirtualLens2.Aperture / 100.0f;
                 float focalLength = _settings.CameraSettings.VirtualLens2.FocalLength / 100.0f;
                 float exposure = _settings.CameraSettings.VirtualLens2.Exposure / 100.0f;
 
-                await SendVirtualLens2Parameter("VirtualLens2_Aperture", aperture);
+                _oscManager.SendParameter(CameraType.VirtualLens2, "Aperture", aperture);
                 await Task.Delay(100);
-                await SendVirtualLens2Parameter("VirtualLens2_FocalLength", focalLength);
+                _oscManager.SendParameter(CameraType.VirtualLens2, "Zoom", focalLength);
                 await Task.Delay(100);
-                await SendVirtualLens2Parameter("VirtualLens2_Exposure", exposure);
-                await Task.Delay(100);
+                _oscManager.SendParameter(CameraType.VirtualLens2, "Exposure", exposure);
 
-                // 4. Enable/Disableの切り替え実行（設定値によって決定）
-                bool shouldEnable = _settings.CameraSettings.Enabled && _settings.CameraSettings.VirtualLens2.Aperture > 0;
-                await SendVirtualLens2EnableParameter("VirtualLens2_Enable", shouldEnable);
-                _oscDataStore.IsVirtualLens2Active = shouldEnable;
-                
-                Console.WriteLine($"[OSC送信] VirtualLens2パラメータ初期化完了 - Enable: {shouldEnable}");
+                Console.WriteLine("[OSC送信] VirtualLens2パラメータ初期化完了");
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"[OSCエラー] VirtualLens2初期化エラー: {ex.Message}");
+                Debug.WriteLine($"VirtualLens2初期化エラー: {ex.Message}");
             }
         }
 
@@ -107,163 +90,126 @@ namespace VSA_launcher.OSCServer
             {
                 Console.WriteLine("[OSC送信] Integralパラメータ初期化開始");
 
-                // 1. Enableを無効化（0に設定）
-                await SendIntegralEnableParameter("Integral_Enable", false);
-                _oscDataStore.IsIntegralActive = false;
-                await Task.Delay(100);
+                // 1. リセット処理
+                await _oscManager.ResetCameraParameters(CameraType.Integral);
+                await Task.Delay(500);
 
-                // 2. 全パラメータを0に設定
-                await SendIntegralParameter("Integral_Aperture", 0.0f);
-                await Task.Delay(100);
-                await SendIntegralParameter("Integral_FocalLength", 0.0f);
-                await Task.Delay(100);
-                await SendIntegralParameter("Integral_Exposure", 0.0f);
-                await Task.Delay(100);
-                await SendIntegralParameter("Integral_ShutterSpeed", 0.0f);
-                await Task.Delay(100);
-                await SendIntegralParameter("Integral_BokehShape", 0);
-                await Task.Delay(100);
-
-                // 3. appsettings.jsonの値を送信（0~100を0~1に変換、BokehShapeは0~10）
+                // 2. appsettings.jsonの値を送信（0~100を0~1に変換）
                 float aperture = _settings.CameraSettings.Integral.Aperture / 100.0f;
                 float focalLength = _settings.CameraSettings.Integral.FocalLength / 100.0f;
                 float exposure = _settings.CameraSettings.Integral.Exposure / 100.0f;
                 float shutterSpeed = _settings.CameraSettings.Integral.ShutterSpeed / 100.0f;
-                int bokehShape = (int)(_settings.CameraSettings.Integral.BokehShape / 100.0f * 10);
+                int bokehShape = _settings.CameraSettings.Integral.BokehShape;
 
-                await SendIntegralParameter("Integral_Aperture", aperture);
+                _oscManager.SendParameter(CameraType.Integral, "Aperture", aperture);
                 await Task.Delay(100);
-                await SendIntegralParameter("Integral_FocalLength", focalLength);
+                _oscManager.SendParameter(CameraType.Integral, "Zoom", focalLength);
                 await Task.Delay(100);
-                await SendIntegralParameter("Integral_Exposure", exposure);
+                _oscManager.SendParameter(CameraType.Integral, "Exposure", exposure);
                 await Task.Delay(100);
-                await SendIntegralParameter("Integral_ShutterSpeed", shutterSpeed);
+                _oscManager.SendParameter(CameraType.Integral, "ShutterSpeed", shutterSpeed);
                 await Task.Delay(100);
-                await SendIntegralParameter("Integral_BokehShape", bokehShape);
-                await Task.Delay(100);
+                _oscManager.SendParameter(CameraType.Integral, "BokehShape", bokehShape);
 
-                // 4. Enable/Disableの切り替え実行（設定値によって決定）
-                bool shouldEnable = _settings.CameraSettings.Enabled && _settings.CameraSettings.Integral.Aperture > 0;
-                await SendIntegralEnableParameter("Integral_Enable", shouldEnable);
-                _oscDataStore.IsIntegralActive = shouldEnable;
-
-                Console.WriteLine($"[OSC送信] Integralパラメータ初期化完了 - Enable: {shouldEnable}");
+                Console.WriteLine("[OSC送信] Integralパラメータ初期化完了");
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"[OSCエラー] Integral初期化エラー: {ex.Message}");
+                Debug.WriteLine($"Integral初期化エラー: {ex.Message}");
             }
         }
 
         /// <summary>
-        /// VirtualLens2パラメータを送信し、データストアに反映
+        /// VirtualLens2パラメータを手動で送信
         /// </summary>
-        private async Task SendVirtualLens2Parameter(string parameterName, float value)
+        public void SendVirtualLens2Parameter(string parameterName, object value)
         {
-            try
+            if (_settings.LauncherSettings.OSCSettings.Enabled)
             {
-                _virtualLens2OscServer.SendParameter(parameterName, value);
+                string shortName = parameterName.Replace("VirtualLens2_", "");
+                _oscManager.SendParameter(CameraType.VirtualLens2, shortName, value);
                 
-                // データストアに反映
-                switch (parameterName)
+                // データストアも更新
+                switch (shortName.ToLower())
                 {
-                    case "VirtualLens2_Aperture":
-                        _oscDataStore.VirtualLens2_Aperture = value;
+                    case "aperture":
+                        if (value is float apertureValue) _oscDataStore.VirtualLens2_Aperture = apertureValue;
                         break;
-                    case "VirtualLens2_FocalLength":
-                        _oscDataStore.VirtualLens2_FocalLength = value;
+                    case "zoom":
+                    case "focallength":
+                        if (value is float zoomValue) _oscDataStore.VirtualLens2_FocalLength = zoomValue;
                         break;
-                    case "VirtualLens2_Exposure":
-                        _oscDataStore.VirtualLens2_Exposure = value;
+                    case "exposure":
+                        if (value is float exposureValue) _oscDataStore.VirtualLens2_Exposure = exposureValue;
                         break;
                 }
-
-                await Task.Delay(50); // 送信間隔を保つ
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"[OSCエラー] VirtualLens2パラメータ送信失敗 {parameterName}: {ex.Message}");
             }
         }
 
         /// <summary>
-        /// VirtualLens2 Enableパラメータを送信し、データストアに反映
+        /// Integralパラメータを手動で送信
         /// </summary>
-        private async Task SendVirtualLens2EnableParameter(string parameterName, bool value)
+        public void SendIntegralParameter(string parameterName, object value)
         {
-            try
+            if (_settings.LauncherSettings.OSCSettings.Enabled)
             {
-                _virtualLens2OscServer.SendParameter(parameterName, value);
+                string shortName = parameterName.Replace("Integral_", "");
+                _oscManager.SendParameter(CameraType.Integral, shortName, value);
                 
-                if (parameterName == "VirtualLens2_Enable")
+                // データストアも更新
+                switch (shortName.ToLower())
                 {
-                    _oscDataStore.IsVirtualLens2Active = value;
+                    case "aperture":
+                        if (value is float apertureValue) _oscDataStore.Integral_Aperture = apertureValue;
+                        break;
+                    case "zoom":
+                    case "focallength":
+                        if (value is float zoomValue) _oscDataStore.Integral_FocalLength = zoomValue;
+                        break;
+                    case "exposure":
+                        if (value is float exposureValue) _oscDataStore.Integral_Exposure = exposureValue;
+                        break;
+                    case "shutterspeed":
+                        if (value is float shutterValue) _oscDataStore.Integral_ShutterSpeed = shutterValue;
+                        break;
+                    case "bokehshape":
+                        if (value is int bokehValue) _oscDataStore.Integral_BokehShape = bokehValue;
+                        break;
                 }
-
-                await Task.Delay(50); // 送信間隔を保つ
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"[OSCエラー] VirtualLens2 Enableパラメータ送信失敗 {parameterName}: {ex.Message}");
             }
         }
 
         /// <summary>
-        /// Integralパラメータを送信し、データストアに反映
+        /// カメラ有効化パラメータを送信
         /// </summary>
-        private async Task SendIntegralParameter(string parameterName, object value)
+        public void SendCameraEnableParameter(CameraType cameraType, bool enabled)
         {
-            try
+            if (_settings.LauncherSettings.OSCSettings.Enabled)
             {
-                _integralOscServer.SendParameter(parameterName, value);
+                _oscManager.SendParameter(cameraType, "Enable", enabled);
                 
-                // データストアに反映
-                switch (parameterName)
+                // データストアも更新
+                switch (cameraType)
                 {
-                    case "Integral_Aperture":
-                        _oscDataStore.Integral_Aperture = (float)value;
+                    case CameraType.VirtualLens2:
+                        _oscDataStore.IsVirtualLens2Active = enabled;
                         break;
-                    case "Integral_FocalLength":
-                        _oscDataStore.Integral_FocalLength = (float)value;
-                        break;
-                    case "Integral_Exposure":
-                        _oscDataStore.Integral_Exposure = (float)value;
-                        break;
-                    case "Integral_ShutterSpeed":
-                        _oscDataStore.Integral_ShutterSpeed = (float)value;
-                        break;
-                    case "Integral_BokehShape":
-                        _oscDataStore.Integral_BokehShape = (int)value;
+                    case CameraType.Integral:
+                        _oscDataStore.IsIntegralActive = enabled;
                         break;
                 }
-
-                await Task.Delay(50); // 送信間隔を保つ
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"[OSCエラー] Integralパラメータ送信失敗 {parameterName}: {ex.Message}");
             }
         }
 
         /// <summary>
-        /// Integral Enableパラメータを送信し、データストアに反映
+        /// 現在アクティブなカメラのパラメータをすべて送信
         /// </summary>
-        private async Task SendIntegralEnableParameter(string parameterName, bool value)
+        public void SendCurrentActiveParameters()
         {
-            try
+            if (_settings.LauncherSettings.OSCSettings.Enabled)
             {
-                _integralOscServer.SendParameter(parameterName, value);
-                
-                if (parameterName == "Integral_Enable")
-                {
-                    _oscDataStore.IsIntegralActive = value;
-                }
-
-                await Task.Delay(50); // 送信間隔を保つ
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"[OSCエラー] Integral Enableパラメータ送信失敗 {parameterName}: {ex.Message}");
+                _oscManager.SendCurrentActiveParameters();
             }
         }
     }
