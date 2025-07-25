@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Drawing.Imaging;
 using VSA_launcher.OSCServer; // 追加
+using VSA_launcher.VRC_Game; // VRChatInitializationManager用
 using VRC.OSCQuery; // 追加
 
 namespace VSA_launcher
@@ -44,6 +45,8 @@ namespace VSA_launcher
         private bool _hasInitializedCamera = false; // カメラ初期化済みフラグ
         private bool _cameraSettingsApplied = false; // カメラ設定適用済みフラグ
         private bool _hasExecutedOscInitialization = false; // アプリセッション中のOSC初期化実行フラグ
+
+        private VRC_Game.VRChatInitializationManager? _vrchatInitializationManager;
 
         // 設定ファイルから読み込んだスタートアップ設定
         private bool _startWithWindows = false;
@@ -171,6 +174,17 @@ namespace VSA_launcher
                 _vrchatMonitorTimer.Interval = 30000; // 30秒ごと
                 _vrchatMonitorTimer.Tick += VRChatMonitorTimer_Tick;
                 _vrchatMonitorTimer.Start();
+
+                if (_oscParameterSender != null)
+                {
+                    _vrchatInitializationManager = new VRC_Game.VRChatInitializationManager(
+                        _logParser, 
+                        _oscParameterSender, 
+                        UpdateStatusInfo
+                    );
+                    _vrchatInitializationManager.Start();
+                    Console.WriteLine("[Form1] VRChat初期化マネージャーを開始しました");
+                }
 
                 // カメラUI制御の初期化
                 InitializeCameraControls();
@@ -655,6 +669,7 @@ namespace VSA_launcher
                 _fileWatcher?.Dispose();
                 _statusUpdateTimer?.Dispose();
                 _vrchatMonitorTimer?.Dispose(); // VRChat監視タイマーのDispose追加
+                _vrchatInitializationManager?.Dispose(); // VRChat初期化マネージャーのDispose追加
                 _systemTrayIcon?.Dispose();
                 _cancellationTokenSource?.Cancel(); // OSCサーバーに停止を通知
                 _vrchatListener?.Dispose(); // VRChatリスナーを

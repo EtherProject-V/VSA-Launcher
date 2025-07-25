@@ -49,6 +49,51 @@ namespace VSA_launcher.OSCServer
         }
 
         /// <summary>
+        /// カメラパラメータのリセット（0に設定）
+        /// </summary>
+        public async Task ResetCameraParameters(CameraType cameraType)
+        {
+            try
+            {
+                Console.WriteLine($"[OSC送信] {cameraType}パラメータリセット開始");
+
+                switch (cameraType)
+                {
+                    case CameraType.VirtualLens2:
+                        _oscManager.SendParameter(CameraType.VirtualLens2, "Enable", false);
+                        await Task.Delay(100);
+                        _oscManager.SendParameter(CameraType.VirtualLens2, "Aperture", 0.0f);
+                        await Task.Delay(100);
+                        _oscManager.SendParameter(CameraType.VirtualLens2, "Zoom", 0.0f);
+                        await Task.Delay(100);
+                        _oscManager.SendParameter(CameraType.VirtualLens2, "Exposure", 0.0f);
+                        break;
+
+                    case CameraType.Integral:
+                        _oscManager.SendParameter(CameraType.Integral, "Enable", false);
+                        await Task.Delay(100);
+                        _oscManager.SendParameter(CameraType.Integral, "Aperture", 0.0f);
+                        await Task.Delay(100);
+                        _oscManager.SendParameter(CameraType.Integral, "Zoom", 0.0f);
+                        await Task.Delay(100);
+                        _oscManager.SendParameter(CameraType.Integral, "Exposure", 0.0f);
+                        await Task.Delay(100);
+                        _oscManager.SendParameter(CameraType.Integral, "ShutterSpeed", 0.0f);
+                        await Task.Delay(100);
+                        _oscManager.SendParameter(CameraType.Integral, "BokehShape", 0);
+                        break;
+                }
+
+                Console.WriteLine($"[OSC送信] {cameraType}パラメータリセット完了");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[OSCエラー] {cameraType}パラメータリセットエラー: {ex.Message}");
+                Debug.WriteLine($"{cameraType}パラメータリセットエラー: {ex.Message}");
+            }
+        }
+
+        /// <summary>
         /// VirtualLens2パラメータの初期化（0→設定値）
         /// </summary>
         private async Task InitializeVirtualLens2Parameters()
@@ -58,7 +103,7 @@ namespace VSA_launcher.OSCServer
                 Console.WriteLine("[OSC送信] VirtualLens2パラメータ初期化開始");
 
                 // 1. リセット処理
-                await _oscManager.ResetCameraParameters(CameraType.VirtualLens2);
+                await ResetCameraParameters(CameraType.VirtualLens2);
                 await Task.Delay(500);
 
                 // 2. appsettings.jsonの値を送信（0~100を0~1に変換）
@@ -91,7 +136,7 @@ namespace VSA_launcher.OSCServer
                 Console.WriteLine("[OSC送信] Integralパラメータ初期化開始");
 
                 // 1. リセット処理
-                await _oscManager.ResetCameraParameters(CameraType.Integral);
+                await ResetCameraParameters(CameraType.Integral);
                 await Task.Delay(500);
 
                 // 2. appsettings.jsonの値を送信（0~100を0~1に変換）

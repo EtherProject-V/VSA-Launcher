@@ -128,51 +128,6 @@ namespace VSA_launcher.OSCServer
         }
 
         /// <summary>
-        /// 特定のカメラタイプのすべてのパラメータをリセット（0に設定）
-        /// </summary>
-        /// <param name="cameraType">リセットするカメラタイプ</param>
-        public async Task ResetCameraParameters(CameraType cameraType)
-        {
-            try
-            {
-                Console.WriteLine($"[OSC送信] {cameraType}パラメータリセット開始");
-
-                switch (cameraType)
-                {
-                    case CameraType.VirtualLens2:
-                        SendParameter(CameraType.VirtualLens2, "Enable", false);
-                        await Task.Delay(100);
-                        SendParameter(CameraType.VirtualLens2, "Aperture", 0.0f);
-                        await Task.Delay(100);
-                        SendParameter(CameraType.VirtualLens2, "Zoom", 0.0f);
-                        await Task.Delay(100);
-                        SendParameter(CameraType.VirtualLens2, "Exposure", 0.0f);
-                        break;
-
-                    case CameraType.Integral:
-                        SendParameter(CameraType.Integral, "Enable", false);
-                        await Task.Delay(100);
-                        SendParameter(CameraType.Integral, "Aperture", 0.0f);
-                        await Task.Delay(100);
-                        SendParameter(CameraType.Integral, "Zoom", 0.0f);
-                        await Task.Delay(100);
-                        SendParameter(CameraType.Integral, "Exposure", 0.0f);
-                        await Task.Delay(100);
-                        SendParameter(CameraType.Integral, "ShutterSpeed", 0.0f);
-                        await Task.Delay(100);
-                        SendParameter(CameraType.Integral, "BokehShape", 0);
-                        break;
-                }
-
-                Console.WriteLine($"[OSC送信] {cameraType}パラメータリセット完了");
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"[OSCエラー] {cameraType}パラメータリセットエラー: {ex.Message}");
-            }
-        }
-
-        /// <summary>
         /// カメラタイプとパラメータ名から完全なパラメータ名を生成
         /// </summary>
         /// <param name="cameraType">カメラタイプ</param>

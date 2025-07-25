@@ -109,22 +109,55 @@ namespace VSA_launcher.OSCServer
         {
             if (!(packet is OscMessage message)) return;
 
-            // 全てのOSC受信をコンソールログに出力
-            Console.WriteLine($"[OSC受信] {DateTime.Now:HH:mm:ss.fff} - {message.Address}");
-            if (message.Count > 0)
+            // 取り込み対象のパラメータのみ処理
+            if (IsTargetParameter(message.Address))
             {
-                Console.WriteLine($"           値: {message[0]}");
-            }
+                // コンソールログ出力
+                Console.WriteLine($"[OSC受信] {DateTime.Now:HH:mm:ss.fff} - {message.Address}");
+                if (message.Count > 0)
+                {
+                    Console.WriteLine($"           値: {message[0]}");
+                }
 
-            // 新しいアドレスを発見した場合のみデバッグログ出力
-            bool isNewAddress = _discoveredAddresses.Add(message.Address);
-            if (isNewAddress)
+                // 新しいアドレスを発見した場合のみデバッグログ出力
+                bool isNewAddress = _discoveredAddresses.Add(message.Address);
+                if (isNewAddress)
+                {
+                    Debug.WriteLine($"新しいOSCアドレス発見: {message.Address}");
+                }
+
+                // パラメータの処理
+                ProcessOscMessage(message);
+            }
+        }
+
+        /// <summary>
+        /// 取り込み対象のパラメータかどうかを判定
+        /// </summary>
+        /// <param name="address">OSCアドレス</param>
+        /// <returns>取り込み対象の場合true</returns>
+        private bool IsTargetParameter(string address)
+        {
+            return address switch
             {
-                Debug.WriteLine($"新しいOSCアドレス発見: {message.Address}");
-            }
-
-            // パラメータの処理
-            ProcessOscMessage(message);
+                // Integral Camera Parameters
+                "/avatar/parameters/Integral_Enable" => true,
+                "/avatar/parameters/Integral_Aperture" => true,
+                "/avatar/parameters/Integral_Zoom" => true,
+                "/avatar/parameters/Integral_FocalLength" => true,
+                "/avatar/parameters/Integral_Exposure" => true,
+                "/avatar/parameters/Integral_ShutterSpeed" => true,
+                "/avatar/parameters/Integral_BokehShape" => true,
+                
+                // VirtualLens2 Camera Parameters
+                "/avatar/parameters/VirtualLens2_Enable" => true,
+                "/avatar/parameters/VirtualLens2_Aperture" => true,
+                "/avatar/parameters/VirtualLens2_Zoom" => true,
+                "/avatar/parameters/VirtualLens2_FocalLength" => true,
+                "/avatar/parameters/VirtualLens2_Exposure" => true,
+                
+                _ => false
+            };
         }
 
         private void ProcessOscMessage(OscMessage message)
