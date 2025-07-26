@@ -71,9 +71,8 @@
             PngMetaDate_button = new Button();
             PngPreview_pictureBox = new PictureBox();
             CameraSettings = new TabPage();
-            cameraSettomg_checkBox = new CheckBox();
             CameraSetting_groupBox = new GroupBox();
-            groupBox1 = new GroupBox();
+            Integral_groupBox = new GroupBox();
             Integral_BokeShape_textBox = new TextBox();
             Integral_BokeShape_label = new Label();
             Integral_ShutterSpeed_textBox = new TextBox();
@@ -91,19 +90,24 @@
             VirtualLens2_FocalLength_label = new Label();
             VirtualLens2_Aperture_textBox = new TextBox();
             VirtualLens2_Aperture_label = new Label();
-            useCamera_checkBox = new CheckBox();
-            useCamera_groupBox = new GroupBox();
-            modeVirtualLens2_radioButton = new RadioButton();
-            modeIntegral_radioButton = new RadioButton();
             CameraSettingApply_button = new Button();
-            CameraSettings_label = new Label();
             LICENSE = new TabPage();
+            devMode_label = new Label();
+            devMode_checkBox = new CheckBox();
             label3 = new Label();
             startup_checkBox = new CheckBox();
             LICENSEOpenFolder_button = new Button();
             label2 = new Label();
             LICENSE_label = new Label();
+            OSCStatus = new TabPage();
+            OSCLog_richTextBox = new RichTextBox();
+            label5 = new Label();
+            OSCLog_checkBox = new CheckBox();
             toolTip1 = new ToolTip(components);
+            useIntegral_checkBox = new CheckBox();
+            useVirtuallens2_checkBox = new CheckBox();
+            useCamera_groupBox = new GroupBox();
+            cameraSettomg_checkBox = new CheckBox();
             contextMenuStrip1.SuspendLayout();
             statusStrip1.SuspendLayout();
             fileSubdivision_Group.SuspendLayout();
@@ -114,10 +118,11 @@
             ((System.ComponentModel.ISupportInitialize)PngPreview_pictureBox).BeginInit();
             CameraSettings.SuspendLayout();
             CameraSetting_groupBox.SuspendLayout();
-            groupBox1.SuspendLayout();
+            Integral_groupBox.SuspendLayout();
             VirtualLens2_groupBox.SuspendLayout();
-            useCamera_groupBox.SuspendLayout();
             LICENSE.SuspendLayout();
+            OSCStatus.SuspendLayout();
+            useCamera_groupBox.SuspendLayout();
             SuspendLayout();
             // 
             // notifyIcon
@@ -264,7 +269,7 @@
             monthCompression_checkBox.AutoSize = true;
             monthCompression_checkBox.Checked = true;
             monthCompression_checkBox.CheckState = CheckState.Checked;
-            monthCompression_checkBox.Location = new Point(3, 261);
+            monthCompression_checkBox.Location = new Point(3, 282);
             monthCompression_checkBox.Name = "monthCompression_checkBox";
             monthCompression_checkBox.Size = new Size(144, 19);
             monthCompression_checkBox.TabIndex = 10;
@@ -288,7 +293,7 @@
             // 
             label1.AutoSize = true;
             label1.ForeColor = Color.Red;
-            label1.Location = new Point(21, 283);
+            label1.Location = new Point(21, 304);
             label1.Name = "label1";
             label1.Size = new Size(230, 15);
             label1.TabIndex = 12;
@@ -387,6 +392,7 @@
             tabControl.Controls.Add(metaData);
             tabControl.Controls.Add(CameraSettings);
             tabControl.Controls.Add(LICENSE);
+            tabControl.Controls.Add(OSCStatus);
             tabControl.Location = new Point(0, 0);
             tabControl.Name = "tabControl";
             tabControl.SelectedIndex = 0;
@@ -395,6 +401,7 @@
             // 
             // main
             // 
+            main.Controls.Add(cameraSettomg_checkBox);
             main.Controls.Add(screenShotFile_textBox);
             main.Controls.Add(screenshotsFolder_label);
             main.Controls.Add(fileRename_label);
@@ -585,59 +592,46 @@
             // 
             // CameraSettings
             // 
-            CameraSettings.Controls.Add(cameraSettomg_checkBox);
             CameraSettings.Controls.Add(CameraSetting_groupBox);
             CameraSettings.Controls.Add(CameraSettingApply_button);
-            CameraSettings.Controls.Add(CameraSettings_label);
             CameraSettings.Location = new Point(4, 24);
             CameraSettings.Name = "CameraSettings";
             CameraSettings.Size = new Size(380, 329);
             CameraSettings.TabIndex = 3;
-            CameraSettings.Text = "カメラの初期値";
+            CameraSettings.Text = "カメラの初期設定";
             CameraSettings.UseVisualStyleBackColor = true;
-            // 
-            // cameraSettomg_checkBox
-            // 
-            cameraSettomg_checkBox.AutoSize = true;
-            cameraSettomg_checkBox.Location = new Point(3, 18);
-            cameraSettomg_checkBox.Name = "cameraSettomg_checkBox";
-            cameraSettomg_checkBox.Size = new Size(213, 19);
-            cameraSettomg_checkBox.TabIndex = 36;
-            cameraSettomg_checkBox.Text = "VL2,Integral等のギミックを利用している";
-            toolTip1.SetToolTip(cameraSettomg_checkBox, "カメラギミックを利用している場合はチェックを入れて下さい\r\nVRChat起動時にカメラの初期値をこちらで上書きします。");
-            cameraSettomg_checkBox.UseVisualStyleBackColor = true;
             // 
             // CameraSetting_groupBox
             // 
-            CameraSetting_groupBox.Controls.Add(groupBox1);
-            CameraSetting_groupBox.Controls.Add(VirtualLens2_groupBox);
-            CameraSetting_groupBox.Controls.Add(useCamera_checkBox);
             CameraSetting_groupBox.Controls.Add(useCamera_groupBox);
-            CameraSetting_groupBox.Location = new Point(1, 38);
+            CameraSetting_groupBox.Controls.Add(Integral_groupBox);
+            CameraSetting_groupBox.Controls.Add(VirtualLens2_groupBox);
+            CameraSetting_groupBox.Location = new Point(1, 3);
             CameraSetting_groupBox.Name = "CameraSetting_groupBox";
-            CameraSetting_groupBox.Size = new Size(376, 231);
+            CameraSetting_groupBox.Size = new Size(376, 287);
             CameraSetting_groupBox.TabIndex = 35;
             CameraSetting_groupBox.TabStop = false;
-            CameraSetting_groupBox.Text = "カメラギミックOSC初期値";
+            CameraSetting_groupBox.Text = "カメラギミック設定";
+            CameraSetting_groupBox.Enter += CameraSetting_groupBox_Enter;
             // 
-            // groupBox1
+            // Integral_groupBox
             // 
-            groupBox1.Controls.Add(Integral_BokeShape_textBox);
-            groupBox1.Controls.Add(Integral_BokeShape_label);
-            groupBox1.Controls.Add(Integral_ShutterSpeed_textBox);
-            groupBox1.Controls.Add(Integral_ShutterSpeed_label);
-            groupBox1.Controls.Add(Integral_Exposure_textBox);
-            groupBox1.Controls.Add(Integral_Aperture_textBox);
-            groupBox1.Controls.Add(Integral_Exposure_label);
-            groupBox1.Controls.Add(Integral_Aperture_label);
-            groupBox1.Controls.Add(Integral_FocalLength_textBox);
-            groupBox1.Controls.Add(Integral_FocalLength_label);
-            groupBox1.Location = new Point(2, 146);
-            groupBox1.Name = "groupBox1";
-            groupBox1.Size = new Size(374, 78);
-            groupBox1.TabIndex = 33;
-            groupBox1.TabStop = false;
-            groupBox1.Text = "Integral";
+            Integral_groupBox.Controls.Add(Integral_BokeShape_textBox);
+            Integral_groupBox.Controls.Add(Integral_BokeShape_label);
+            Integral_groupBox.Controls.Add(Integral_ShutterSpeed_textBox);
+            Integral_groupBox.Controls.Add(Integral_ShutterSpeed_label);
+            Integral_groupBox.Controls.Add(Integral_Exposure_textBox);
+            Integral_groupBox.Controls.Add(Integral_Aperture_textBox);
+            Integral_groupBox.Controls.Add(Integral_Exposure_label);
+            Integral_groupBox.Controls.Add(Integral_Aperture_label);
+            Integral_groupBox.Controls.Add(Integral_FocalLength_textBox);
+            Integral_groupBox.Controls.Add(Integral_FocalLength_label);
+            Integral_groupBox.Location = new Point(0, 143);
+            Integral_groupBox.Name = "Integral_groupBox";
+            Integral_groupBox.Size = new Size(374, 78);
+            Integral_groupBox.TabIndex = 33;
+            Integral_groupBox.TabStop = false;
+            Integral_groupBox.Text = "Integral";
             // 
             // Integral_BokeShape_textBox
             // 
@@ -737,9 +731,9 @@
             VirtualLens2_groupBox.Controls.Add(VirtualLens2_FocalLength_label);
             VirtualLens2_groupBox.Controls.Add(VirtualLens2_Aperture_textBox);
             VirtualLens2_groupBox.Controls.Add(VirtualLens2_Aperture_label);
-            VirtualLens2_groupBox.Location = new Point(2, 91);
+            VirtualLens2_groupBox.Location = new Point(-1, 88);
             VirtualLens2_groupBox.Name = "VirtualLens2_groupBox";
-            VirtualLens2_groupBox.Size = new Size(374, 49);
+            VirtualLens2_groupBox.Size = new Size(377, 49);
             VirtualLens2_groupBox.TabIndex = 23;
             VirtualLens2_groupBox.TabStop = false;
             VirtualLens2_groupBox.Text = "VirtualLens2";
@@ -801,50 +795,6 @@
             VirtualLens2_Aperture_label.Text = "絞り:";
             VirtualLens2_Aperture_label.Click += label4_Click_3;
             // 
-            // useCamera_checkBox
-            // 
-            useCamera_checkBox.AutoSize = true;
-            useCamera_checkBox.Location = new Point(7, 22);
-            useCamera_checkBox.Name = "useCamera_checkBox";
-            useCamera_checkBox.Size = new Size(161, 19);
-            useCamera_checkBox.TabIndex = 26;
-            useCamera_checkBox.Text = "カメラを最初から起動しておく";
-            useCamera_checkBox.UseVisualStyleBackColor = true;
-            useCamera_checkBox.CheckedChanged += checkBox1_CheckedChanged;
-            // 
-            // useCamera_groupBox
-            // 
-            useCamera_groupBox.Controls.Add(modeVirtualLens2_radioButton);
-            useCamera_groupBox.Controls.Add(modeIntegral_radioButton);
-            useCamera_groupBox.Location = new Point(2, 43);
-            useCamera_groupBox.Name = "useCamera_groupBox";
-            useCamera_groupBox.Size = new Size(374, 42);
-            useCamera_groupBox.TabIndex = 24;
-            useCamera_groupBox.TabStop = false;
-            useCamera_groupBox.Text = "カメラ初期起動設定";
-            // 
-            // modeVirtualLens2_radioButton
-            // 
-            modeVirtualLens2_radioButton.AutoSize = true;
-            modeVirtualLens2_radioButton.Location = new Point(6, 17);
-            modeVirtualLens2_radioButton.Name = "modeVirtualLens2_radioButton";
-            modeVirtualLens2_radioButton.Size = new Size(89, 19);
-            modeVirtualLens2_radioButton.TabIndex = 24;
-            modeVirtualLens2_radioButton.TabStop = true;
-            modeVirtualLens2_radioButton.Text = "VirtualLens2";
-            modeVirtualLens2_radioButton.UseVisualStyleBackColor = true;
-            // 
-            // modeIntegral_radioButton
-            // 
-            modeIntegral_radioButton.AutoSize = true;
-            modeIntegral_radioButton.Location = new Point(101, 17);
-            modeIntegral_radioButton.Name = "modeIntegral_radioButton";
-            modeIntegral_radioButton.Size = new Size(65, 19);
-            modeIntegral_radioButton.TabIndex = 25;
-            modeIntegral_radioButton.TabStop = true;
-            modeIntegral_radioButton.Text = "Integral";
-            modeIntegral_radioButton.UseVisualStyleBackColor = true;
-            // 
             // CameraSettingApply_button
             // 
             CameraSettingApply_button.Location = new Point(297, 296);
@@ -854,20 +804,10 @@
             CameraSettingApply_button.Text = "設定適用";
             CameraSettingApply_button.UseVisualStyleBackColor = true;
             // 
-            // CameraSettings_label
-            // 
-            CameraSettings_label.AutoSize = true;
-            CameraSettings_label.CausesValidation = false;
-            CameraSettings_label.ForeColor = Color.Firebrick;
-            CameraSettings_label.Location = new Point(196, 0);
-            CameraSettings_label.Name = "CameraSettings_label";
-            CameraSettings_label.Size = new Size(183, 15);
-            CameraSettings_label.TabIndex = 21;
-            CameraSettings_label.Text = "※こちらはVL2.Integral用の項目です\r\n";
-            CameraSettings_label.Click += label4_Click_1;
-            // 
             // LICENSE
             // 
+            LICENSE.Controls.Add(devMode_label);
+            LICENSE.Controls.Add(devMode_checkBox);
             LICENSE.Controls.Add(label3);
             LICENSE.Controls.Add(startup_checkBox);
             LICENSE.Controls.Add(LICENSEOpenFolder_button);
@@ -880,6 +820,26 @@
             LICENSE.TabIndex = 1;
             LICENSE.Text = "その他";
             LICENSE.UseVisualStyleBackColor = true;
+            // 
+            // devMode_label
+            // 
+            devMode_label.AutoSize = true;
+            devMode_label.Font = new Font("Yu Gothic UI Semibold", 12F, FontStyle.Bold, GraphicsUnit.Point, 128);
+            devMode_label.Location = new Point(3, 214);
+            devMode_label.Name = "devMode_label";
+            devMode_label.Size = new Size(127, 21);
+            devMode_label.TabIndex = 6;
+            devMode_label.Text = "かいはつしゃも～ど";
+            // 
+            // devMode_checkBox
+            // 
+            devMode_checkBox.AutoSize = true;
+            devMode_checkBox.Location = new Point(3, 238);
+            devMode_checkBox.Name = "devMode_checkBox";
+            devMode_checkBox.Size = new Size(125, 19);
+            devMode_checkBox.TabIndex = 5;
+            devMode_checkBox.Text = "開発用タブを有効化";
+            devMode_checkBox.UseVisualStyleBackColor = true;
             // 
             // label3
             // 
@@ -930,6 +890,91 @@
             LICENSE_label.TabIndex = 0;
             LICENSE_label.Text = "LICENSE";
             // 
+            // OSCStatus
+            // 
+            OSCStatus.Controls.Add(OSCLog_richTextBox);
+            OSCStatus.Controls.Add(label5);
+            OSCStatus.Controls.Add(OSCLog_checkBox);
+            OSCStatus.Location = new Point(4, 24);
+            OSCStatus.Name = "OSCStatus";
+            OSCStatus.Size = new Size(380, 329);
+            OSCStatus.TabIndex = 4;
+            OSCStatus.Text = "【開発】OSC";
+            OSCStatus.UseVisualStyleBackColor = true;
+            OSCStatus.Click += OSCStatus_Click;
+            // 
+            // OSCLog_richTextBox
+            // 
+            OSCLog_richTextBox.Location = new Point(6, 56);
+            OSCLog_richTextBox.Name = "OSCLog_richTextBox";
+            OSCLog_richTextBox.Size = new Size(371, 222);
+            OSCLog_richTextBox.TabIndex = 9;
+            OSCLog_richTextBox.Text = "";
+            // 
+            // label5
+            // 
+            label5.AutoSize = true;
+            label5.Font = new Font("Yu Gothic UI Semibold", 12F, FontStyle.Bold, GraphicsUnit.Point, 128);
+            label5.Location = new Point(6, 7);
+            label5.Name = "label5";
+            label5.Size = new Size(86, 21);
+            label5.TabIndex = 8;
+            label5.Text = "OSCの監視";
+            // 
+            // OSCLog_checkBox
+            // 
+            OSCLog_checkBox.AutoSize = true;
+            OSCLog_checkBox.Location = new Point(6, 31);
+            OSCLog_checkBox.Name = "OSCLog_checkBox";
+            OSCLog_checkBox.Size = new Size(124, 19);
+            OSCLog_checkBox.TabIndex = 7;
+            OSCLog_checkBox.Text = "OSCの全項目を見る";
+            OSCLog_checkBox.UseVisualStyleBackColor = true;
+            // 
+            // useIntegral_checkBox
+            // 
+            useIntegral_checkBox.AutoSize = true;
+            useIntegral_checkBox.Location = new Point(4, 21);
+            useIntegral_checkBox.Name = "useIntegral_checkBox";
+            useIntegral_checkBox.Size = new Size(66, 19);
+            useIntegral_checkBox.TabIndex = 37;
+            useIntegral_checkBox.Text = "Integral";
+            toolTip1.SetToolTip(useIntegral_checkBox, "カメラギミックを利用している場合はチェックを入れて下さい\r\nVRChat起動時にカメラの初期値をこちらで上書きします。");
+            useIntegral_checkBox.UseVisualStyleBackColor = true;
+            // 
+            // useVirtuallens2_checkBox
+            // 
+            useVirtuallens2_checkBox.AutoSize = true;
+            useVirtuallens2_checkBox.Location = new Point(76, 21);
+            useVirtuallens2_checkBox.Name = "useVirtuallens2_checkBox";
+            useVirtuallens2_checkBox.Size = new Size(90, 19);
+            useVirtuallens2_checkBox.TabIndex = 38;
+            useVirtuallens2_checkBox.Text = "VirtualLenz2";
+            toolTip1.SetToolTip(useVirtuallens2_checkBox, "カメラギミックを利用している場合はチェックを入れて下さい\r\nVRChat起動時にカメラの初期値をこちらで上書きします。");
+            useVirtuallens2_checkBox.UseVisualStyleBackColor = true;
+            // 
+            // useCamera_groupBox
+            // 
+            useCamera_groupBox.Controls.Add(useVirtuallens2_checkBox);
+            useCamera_groupBox.Controls.Add(useIntegral_checkBox);
+            useCamera_groupBox.Location = new Point(2, 22);
+            useCamera_groupBox.Name = "useCamera_groupBox";
+            useCamera_groupBox.Size = new Size(374, 46);
+            useCamera_groupBox.TabIndex = 40;
+            useCamera_groupBox.TabStop = false;
+            useCamera_groupBox.Text = "使用しているカメラギミックにチェックしてください";
+            // 
+            // cameraSettomg_checkBox
+            // 
+            cameraSettomg_checkBox.AutoSize = true;
+            cameraSettomg_checkBox.Location = new Point(3, 260);
+            cameraSettomg_checkBox.Name = "cameraSettomg_checkBox";
+            cameraSettomg_checkBox.Size = new Size(213, 19);
+            cameraSettomg_checkBox.TabIndex = 37;
+            cameraSettomg_checkBox.Text = "VL2,Integral等のギミックを利用している";
+            toolTip1.SetToolTip(cameraSettomg_checkBox, "カメラギミックを利用している場合はチェックを入れて下さい\r\nVRChat起動時にカメラの初期値をこちらで上書きします。");
+            cameraSettomg_checkBox.UseVisualStyleBackColor = true;
+            // 
             // VSA_launcher
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
@@ -954,17 +999,17 @@
             metaData.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)PngPreview_pictureBox).EndInit();
             CameraSettings.ResumeLayout(false);
-            CameraSettings.PerformLayout();
             CameraSetting_groupBox.ResumeLayout(false);
-            CameraSetting_groupBox.PerformLayout();
-            groupBox1.ResumeLayout(false);
-            groupBox1.PerformLayout();
+            Integral_groupBox.ResumeLayout(false);
+            Integral_groupBox.PerformLayout();
             VirtualLens2_groupBox.ResumeLayout(false);
             VirtualLens2_groupBox.PerformLayout();
-            useCamera_groupBox.ResumeLayout(false);
-            useCamera_groupBox.PerformLayout();
             LICENSE.ResumeLayout(false);
             LICENSE.PerformLayout();
+            OSCStatus.ResumeLayout(false);
+            OSCStatus.PerformLayout();
+            useCamera_groupBox.ResumeLayout(false);
+            useCamera_groupBox.PerformLayout();
             ResumeLayout(false);
             PerformLayout();
         }
@@ -1031,20 +1076,15 @@
         private RichTextBox CameraInfo_richTextBox;
         private ToolStripStatusLabel VRCStartStatus_toolStripStatusLabel;
         private TabPage CameraSettings;
-        private Label CameraSettings_label;
         private GroupBox VirtualLens2_groupBox;
         private ContextMenuStrip contextMenuStrip2;
-        private RadioButton modeVirtualLens2_radioButton;
-        private RadioButton modeIntegral_radioButton;
-        private CheckBox useCamera_checkBox;
-        private GroupBox useCamera_groupBox;
         private Label VirtualLens2_Aperture_label;
         private TextBox VirtualLens2_Aperture_textBox;
         private TextBox VirtualLens2_Exposure_textBox;
         private Label VirtualLens2_Exposure_label;
         private TextBox VirtualLens2_FocalLength_textBox;
         private Label VirtualLens2_FocalLength_label;
-        private GroupBox groupBox1;
+        private GroupBox Integral_groupBox;
         private TextBox Integral_Aperture_textBox;
         private Label Integral_Aperture_label;
         private TextBox Integral_BokeShape_textBox;
@@ -1057,7 +1097,16 @@
         private Label Integral_FocalLength_label;
         private Button CameraSettingApply_button;
         private GroupBox CameraSetting_groupBox;
-        private CheckBox cameraSettomg_checkBox;
         private ToolTip toolTip1;
+        private Label devMode_label;
+        private CheckBox devMode_checkBox;
+        private TabPage OSCStatus;
+        private Label label5;
+        private CheckBox OSCLog_checkBox;
+        private RichTextBox OSCLog_richTextBox;
+        private CheckBox useIntegral_checkBox;
+        private CheckBox useVirtuallens2_checkBox;
+        private CheckBox cameraSettomg_checkBox;
+        private GroupBox useCamera_groupBox;
     }
 }

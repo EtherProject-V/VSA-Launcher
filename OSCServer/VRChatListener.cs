@@ -27,6 +27,16 @@ namespace VSA_launcher.OSCServer
         // 受信したユニークなアドレスを保存するためのコレクション（デバッグ用）
         private readonly HashSet<string> _discoveredAddresses = new HashSet<string>();
 
+        /// <summary>
+        /// OSCメッセージ受信通知イベント（開発モード用）
+        /// </summary>
+        public event Action<string, object?>? MessageReceived;
+
+        /// <summary>
+        /// OSCログ出力用イベント（ログモード用）
+        /// </summary>
+        public event Action<string>? LogMessageReceived;
+
         public VRChatListener(OscDataStore dataStore)
         {
             _dataStore = dataStore ?? throw new ArgumentNullException(nameof(dataStore));
@@ -109,26 +119,35 @@ namespace VSA_launcher.OSCServer
         {
             if (!(packet is OscMessage message)) return;
 
-            // 取り込み対象のパラメータのみ処理
+            // 取り込み対象のパラメータのみコンソールログに出力
             if (IsTargetParameter(message.Address))
             {
-                // コンソールログ出力
                 Console.WriteLine($"[OSC受信] {DateTime.Now:HH:mm:ss.fff} - {message.Address}");
                 if (message.Count > 0)
                 {
                     Console.WriteLine($"           値: {message[0]}");
                 }
 
-                // 新しいアドレスを発見した場合のみデバッグログ出力
-                bool isNewAddress = _discoveredAddresses.Add(message.Address);
-                if (isNewAddress)
-                {
-                    Debug.WriteLine($"新しいOSCアドレス発見: {message.Address}");
-                }
+                // 開発モード用の受信通知イベント
+                MessageReceived?.Invoke(message.Address, message.Count > 0 ? message[0] : null);
 
-                // パラメータの処理
-                ProcessOscMessage(message);
+                // ログモード用のイベント（軽量化のため文字列を事前構築）
+                string logMessage = $"[{DateTime.Now:HH:mm:ss.fff}] {message.Address}";
+                if (message.Count > 0)
+                {
+                    logMessage += $" = {message[0]}";
+                }
+                LogMessageReceived?.Invoke(logMessage);
             }
+
+            // 新しいアドレスを発見した場合のみデバッグログ出力
+            bool isNewAddress = _discoveredAddresses.Add(message.Address);
+            if (isNewAddress)
+            {
+                Debug.WriteLine($"新しいOSCアドレス発見: {message.Address}");
+            }
+
+            // データストア更新処理は削除 - UI主導の設定管理に変更
         }
 
         /// <summary>
@@ -158,131 +177,6 @@ namespace VSA_launcher.OSCServer
                 
                 _ => false
             };
-        }
-
-        private void ProcessOscMessage(OscMessage message)
-        {
-            switch (message.Address)
-            {
-                // Integral Camera Parameters
-                case "/avatar/parameters/Integral_Enable":
-                    if (message.Count > 0)
-                    {
-                        bool enabled = message[0] switch
-                        {
-                            bool boolValue => boolValue,
-                            float floatValue => floatValue > 0.5f,
-                            int intValue => intValue > 0,
-                            _ => false
-                        };
-                        _dataStore.IsIntegralActive = enabled;
-                        Console.WriteLine($"[OSC更新] Integral_Enable: {enabled}");
-                        Debug.WriteLine($"Integral_Enable updated: {enabled}");
-                    }
-                    break;
-                    
-                case "/avatar/parameters/Integral_Aperture":
-                    if (message.Count > 0 && message[0] is float aperture)
-                    {
-                        _dataStore.Integral_Aperture = aperture;
-                        Console.WriteLine($"[OSC更新] Integral_Aperture: {aperture}");
-                        Debug.WriteLine($"Integral_Aperture updated: {aperture}");
-                    }
-                    break;
-                    
-                case "/avatar/parameters/Integral_Zoom":
-                case "/avatar/parameters/Integral_FocalLength":
-                    if (message.Count > 0 && message[0] is float focalLength)
-                    {
-                        _dataStore.Integral_FocalLength = focalLength;
-                        Console.WriteLine($"[OSC更新] Integral_FocalLength: {focalLength}");
-                        Debug.WriteLine($"Integral_FocalLength updated: {focalLength}");
-                    }
-                    break;
-                    
-                case "/avatar/parameters/Integral_Exposure":
-                    if (message.Count > 0 && message[0] is float exposure)
-                    {
-                        _dataStore.Integral_Exposure = exposure;
-                        Console.WriteLine($"[OSC更新] Integral_Exposure: {exposure}");
-                        Debug.WriteLine($"Integral_Exposure updated: {exposure}");
-                    }
-                    break;
-                    
-                case "/avatar/parameters/Integral_ShutterSpeed":
-                    if (message.Count > 0 && message[0] is float shutterSpeed)
-                    {
-                        _dataStore.Integral_ShutterSpeed = shutterSpeed;
-                        Console.WriteLine($"[OSC更新] Integral_ShutterSpeed: {shutterSpeed}");
-                        Debug.WriteLine($"Integral_ShutterSpeed updated: {shutterSpeed}");
-                    }
-                    break;
-                    
-                case "/avatar/parameters/Integral_BokehShape":
-                    if (message.Count > 0)
-                    {
-                        // int型またはfloat型から変換
-                        int bokehShape = message[0] switch
-                        {
-                            int intValue => intValue,
-                            float floatValue => (int)floatValue,
-                            _ => 0
-                        };
-                        _dataStore.Integral_BokehShape = bokehShape;
-                        Console.WriteLine($"[OSC更新] Integral_BokehShape: {bokehShape}");
-                        Debug.WriteLine($"Integral_BokehShape updated: {bokehShape}");
-                    }
-                    break;
-
-                // VirtualLens2 Camera Parameters
-                case "/avatar/parameters/VirtualLens2_Enable":
-                    if (message.Count > 0)
-                    {
-                        bool enabled = message[0] switch
-                        {
-                            bool boolValue => boolValue,
-                            float floatValue => floatValue > 0.5f,
-                            int intValue => intValue > 0,
-                            _ => false
-                        };
-                        _dataStore.IsVirtualLens2Active = enabled;
-                        Console.WriteLine($"[OSC更新] VirtualLens2_Enable: {enabled}");
-                        Debug.WriteLine($"VirtualLens2_Enable updated: {enabled}");
-                    }
-                    break;
-                    
-                case "/avatar/parameters/VirtualLens2_Aperture":
-                    if (message.Count > 0 && message[0] is float vl2Aperture)
-                    {
-                        _dataStore.VirtualLens2_Aperture = vl2Aperture;
-                        Console.WriteLine($"[OSC更新] VirtualLens2_Aperture: {vl2Aperture}");
-                        Debug.WriteLine($"VirtualLens2_Aperture updated: {vl2Aperture}");
-                    }
-                    break;
-                    
-                case "/avatar/parameters/VirtualLens2_Zoom":
-                case "/avatar/parameters/VirtualLens2_FocalLength":
-                    if (message.Count > 0 && message[0] is float vl2FocalLength)
-                    {
-                        _dataStore.VirtualLens2_FocalLength = vl2FocalLength;
-                        Console.WriteLine($"[OSC更新] VirtualLens2_FocalLength: {vl2FocalLength}");
-                        Debug.WriteLine($"VirtualLens2_FocalLength updated: {vl2FocalLength}");
-                    }
-                    break;
-                    
-                case "/avatar/parameters/VirtualLens2_Exposure":
-                    if (message.Count > 0 && message[0] is float vl2Exposure)
-                    {
-                        _dataStore.VirtualLens2_Exposure = vl2Exposure;
-                        Console.WriteLine($"[OSC更新] VirtualLens2_Exposure: {vl2Exposure}");
-                        Debug.WriteLine($"VirtualLens2_Exposure updated: {vl2Exposure}");
-                    }
-                    break;
-
-                default:
-                    // 未知のメッセージは無視（ログ出力はしない）
-                    break;
-            }
         }
 
         public void Stop()
