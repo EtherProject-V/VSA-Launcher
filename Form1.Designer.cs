@@ -53,6 +53,7 @@
             fileRename_label = new Label();
             tabControl = new TabControl();
             main = new TabPage();
+            cameraSettomg_checkBox = new CheckBox();
             metaData = new TabPage();
             CameraInfo_richTextBox = new RichTextBox();
             CameraUse_textBox = new TextBox();
@@ -72,6 +73,9 @@
             PngPreview_pictureBox = new PictureBox();
             CameraSettings = new TabPage();
             CameraSetting_groupBox = new GroupBox();
+            useCamera_groupBox = new GroupBox();
+            useVirtuallens2_checkBox = new CheckBox();
+            useIntegral_checkBox = new CheckBox();
             Integral_groupBox = new GroupBox();
             Integral_BokeShape_textBox = new TextBox();
             Integral_BokeShape_label = new Label();
@@ -104,10 +108,6 @@
             label5 = new Label();
             OSCLog_checkBox = new CheckBox();
             toolTip1 = new ToolTip(components);
-            useIntegral_checkBox = new CheckBox();
-            useVirtuallens2_checkBox = new CheckBox();
-            useCamera_groupBox = new GroupBox();
-            cameraSettomg_checkBox = new CheckBox();
             contextMenuStrip1.SuspendLayout();
             statusStrip1.SuspendLayout();
             fileSubdivision_Group.SuspendLayout();
@@ -118,11 +118,11 @@
             ((System.ComponentModel.ISupportInitialize)PngPreview_pictureBox).BeginInit();
             CameraSettings.SuspendLayout();
             CameraSetting_groupBox.SuspendLayout();
+            useCamera_groupBox.SuspendLayout();
             Integral_groupBox.SuspendLayout();
             VirtualLens2_groupBox.SuspendLayout();
             LICENSE.SuspendLayout();
             OSCStatus.SuspendLayout();
-            useCamera_groupBox.SuspendLayout();
             SuspendLayout();
             // 
             // notifyIcon
@@ -426,6 +426,17 @@
             main.Text = "メイン";
             main.UseVisualStyleBackColor = true;
             // 
+            // cameraSettomg_checkBox
+            // 
+            cameraSettomg_checkBox.AutoSize = true;
+            cameraSettomg_checkBox.Location = new Point(3, 260);
+            cameraSettomg_checkBox.Name = "cameraSettomg_checkBox";
+            cameraSettomg_checkBox.Size = new Size(213, 19);
+            cameraSettomg_checkBox.TabIndex = 37;
+            cameraSettomg_checkBox.Text = "VL2,Integral等のギミックを利用している";
+            toolTip1.SetToolTip(cameraSettomg_checkBox, "カメラギミックを利用している場合はチェックを入れて下さい\r\nVRChat起動時にカメラの初期値をこちらで上書きします。");
+            cameraSettomg_checkBox.UseVisualStyleBackColor = true;
+            // 
             // metaData
             // 
             metaData.Controls.Add(CameraInfo_richTextBox);
@@ -456,7 +467,7 @@
             // 
             CameraInfo_richTextBox.Location = new Point(90, 279);
             CameraInfo_richTextBox.Name = "CameraInfo_richTextBox";
-            CameraInfo_richTextBox.Size = new Size(277, 41);
+            CameraInfo_richTextBox.Size = new Size(277, 66);
             CameraInfo_richTextBox.TabIndex = 33;
             CameraInfo_richTextBox.Text = "";
             // 
@@ -613,6 +624,39 @@
             CameraSetting_groupBox.TabStop = false;
             CameraSetting_groupBox.Text = "カメラギミック設定";
             CameraSetting_groupBox.Enter += CameraSetting_groupBox_Enter;
+            // 
+            // useCamera_groupBox
+            // 
+            useCamera_groupBox.Controls.Add(useVirtuallens2_checkBox);
+            useCamera_groupBox.Controls.Add(useIntegral_checkBox);
+            useCamera_groupBox.Location = new Point(2, 22);
+            useCamera_groupBox.Name = "useCamera_groupBox";
+            useCamera_groupBox.Size = new Size(374, 46);
+            useCamera_groupBox.TabIndex = 40;
+            useCamera_groupBox.TabStop = false;
+            useCamera_groupBox.Text = "使用しているカメラギミックにチェックしてください";
+            // 
+            // useVirtuallens2_checkBox
+            // 
+            useVirtuallens2_checkBox.AutoSize = true;
+            useVirtuallens2_checkBox.Location = new Point(76, 21);
+            useVirtuallens2_checkBox.Name = "useVirtuallens2_checkBox";
+            useVirtuallens2_checkBox.Size = new Size(90, 19);
+            useVirtuallens2_checkBox.TabIndex = 38;
+            useVirtuallens2_checkBox.Text = "VirtualLenz2";
+            toolTip1.SetToolTip(useVirtuallens2_checkBox, "カメラギミックを利用している場合はチェックを入れて下さい\r\nVRChat起動時にカメラの初期値をこちらで上書きします。");
+            useVirtuallens2_checkBox.UseVisualStyleBackColor = true;
+            // 
+            // useIntegral_checkBox
+            // 
+            useIntegral_checkBox.AutoSize = true;
+            useIntegral_checkBox.Location = new Point(4, 21);
+            useIntegral_checkBox.Name = "useIntegral_checkBox";
+            useIntegral_checkBox.Size = new Size(66, 19);
+            useIntegral_checkBox.TabIndex = 37;
+            useIntegral_checkBox.Text = "Integral";
+            toolTip1.SetToolTip(useIntegral_checkBox, "カメラギミックを利用している場合はチェックを入れて下さい\r\nVRChat起動時にカメラの初期値をこちらで上書きします。");
+            useIntegral_checkBox.UseVisualStyleBackColor = true;
             // 
             // Integral_groupBox
             // 
@@ -931,50 +975,6 @@
             OSCLog_checkBox.Text = "OSCの全項目を見る";
             OSCLog_checkBox.UseVisualStyleBackColor = true;
             // 
-            // useIntegral_checkBox
-            // 
-            useIntegral_checkBox.AutoSize = true;
-            useIntegral_checkBox.Location = new Point(4, 21);
-            useIntegral_checkBox.Name = "useIntegral_checkBox";
-            useIntegral_checkBox.Size = new Size(66, 19);
-            useIntegral_checkBox.TabIndex = 37;
-            useIntegral_checkBox.Text = "Integral";
-            toolTip1.SetToolTip(useIntegral_checkBox, "カメラギミックを利用している場合はチェックを入れて下さい\r\nVRChat起動時にカメラの初期値をこちらで上書きします。");
-            useIntegral_checkBox.UseVisualStyleBackColor = true;
-            // 
-            // useVirtuallens2_checkBox
-            // 
-            useVirtuallens2_checkBox.AutoSize = true;
-            useVirtuallens2_checkBox.Location = new Point(76, 21);
-            useVirtuallens2_checkBox.Name = "useVirtuallens2_checkBox";
-            useVirtuallens2_checkBox.Size = new Size(90, 19);
-            useVirtuallens2_checkBox.TabIndex = 38;
-            useVirtuallens2_checkBox.Text = "VirtualLenz2";
-            toolTip1.SetToolTip(useVirtuallens2_checkBox, "カメラギミックを利用している場合はチェックを入れて下さい\r\nVRChat起動時にカメラの初期値をこちらで上書きします。");
-            useVirtuallens2_checkBox.UseVisualStyleBackColor = true;
-            // 
-            // useCamera_groupBox
-            // 
-            useCamera_groupBox.Controls.Add(useVirtuallens2_checkBox);
-            useCamera_groupBox.Controls.Add(useIntegral_checkBox);
-            useCamera_groupBox.Location = new Point(2, 22);
-            useCamera_groupBox.Name = "useCamera_groupBox";
-            useCamera_groupBox.Size = new Size(374, 46);
-            useCamera_groupBox.TabIndex = 40;
-            useCamera_groupBox.TabStop = false;
-            useCamera_groupBox.Text = "使用しているカメラギミックにチェックしてください";
-            // 
-            // cameraSettomg_checkBox
-            // 
-            cameraSettomg_checkBox.AutoSize = true;
-            cameraSettomg_checkBox.Location = new Point(3, 260);
-            cameraSettomg_checkBox.Name = "cameraSettomg_checkBox";
-            cameraSettomg_checkBox.Size = new Size(213, 19);
-            cameraSettomg_checkBox.TabIndex = 37;
-            cameraSettomg_checkBox.Text = "VL2,Integral等のギミックを利用している";
-            toolTip1.SetToolTip(cameraSettomg_checkBox, "カメラギミックを利用している場合はチェックを入れて下さい\r\nVRChat起動時にカメラの初期値をこちらで上書きします。");
-            cameraSettomg_checkBox.UseVisualStyleBackColor = true;
-            // 
             // VSA_launcher
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
@@ -1000,6 +1000,8 @@
             ((System.ComponentModel.ISupportInitialize)PngPreview_pictureBox).EndInit();
             CameraSettings.ResumeLayout(false);
             CameraSetting_groupBox.ResumeLayout(false);
+            useCamera_groupBox.ResumeLayout(false);
+            useCamera_groupBox.PerformLayout();
             Integral_groupBox.ResumeLayout(false);
             Integral_groupBox.PerformLayout();
             VirtualLens2_groupBox.ResumeLayout(false);
@@ -1008,8 +1010,6 @@
             LICENSE.PerformLayout();
             OSCStatus.ResumeLayout(false);
             OSCStatus.PerformLayout();
-            useCamera_groupBox.ResumeLayout(false);
-            useCamera_groupBox.PerformLayout();
             ResumeLayout(false);
             PerformLayout();
         }

@@ -28,7 +28,7 @@ namespace VSA_launcher
         private readonly Regex _authUserPattern = new Regex(@"User Authenticated: ([^\(]+) \(usr_[a-z0-9\-]+\)", RegexOptions.Compiled);
 
         // 最後に検出したローカルユーザー（自分自身）
-        private string _detectedLocalUser = "Unknown User";
+        private static string _detectedLocalUser = "Unknown User";
 
         /// <summary>
         /// ログコンテンツからローカルユーザー（自分自身）を検出
