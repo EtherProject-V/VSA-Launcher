@@ -232,7 +232,7 @@ namespace VSA_launcher
     public class VirtualLens2Settings
     {
         public int Aperture { get; set; } = 0;     // appsettings.jsonに合わせて0に変更
-        public int FocalLength { get; set; } = 35; // appsettings.jsonに合わせて35に変更
+        public int FocalLength { get; set; } = 44; // appsettings.jsonに合わせて44に変更
         public int Exposure { get; set; } = 50;
     }
 

@@ -378,6 +378,8 @@ namespace VSA_launcher
             // スタートアップ設定の初期化
             InitializeStartupSetting();
 
+            // VRChatの初期状態をチェック（アプリ起動時の既存VRChat.exe検知）
+            CheckInitialVRChatStatus();
 
             // 初期状態のステータス表示（カメラモード情報を含む）
             UpdateStatusInfoWithCamera("アプリケーション初期化完了", "監視準備中...");
@@ -1275,6 +1277,62 @@ namespace VSA_launcher
         }
 
         /// <summary>
+        /// アプリ起動時のVRChat状態チェック（既に起動している場合の処理）
+        /// </summary>
+        private void CheckInitialVRChatStatus()
+        {
+            try
+            {
+                _isVRChatRunning = IsVRChatRunning();
+                
+                // VRChatが既に起動している場合の処理
+                if (_isVRChatRunning)
+                {
+                    Console.WriteLine("[初期化] VRChat.exeが既に起動しています");
+                    
+                    // UIの更新
+                    UpdateVRChatStatusLabel();
+                    
+                    // カメラ設定が有効で設定が適用済みの場合、2分後にOSC初期化を実行
+                    if ((cameraSettomg_checkBox?.Checked == true) && _cameraSettingsApplied)
+                    {
+                        if (!_hasExecutedOscInitialization)
+                        {
+                            Console.WriteLine("[初期化] アプリ起動時VRChat検知 - 2分後にOSC初期化を実行します");
+                            _hasExecutedOscInitialization = true;
+
+                            // 2分後にOSC初期化を実行
+                            _ = Task.Run(async () =>
+                            {
+                                await Task.Delay(TimeSpan.FromMinutes(2));
+                                await ExecuteOscCameraInitialization();
+                            });
+                        }
+                    }
+                    else
+                    {
+                        Console.WriteLine($"[初期化] OSC初期化条件未達成 - カメラ設定有効: {cameraSettomg_checkBox?.Checked}, 設定適用済み: {_cameraSettingsApplied}");
+                    }
+                    
+                    // 従来のカメラ初期化も実行
+                    if (!_hasInitializedCamera)
+                    {
+                        Task.Run(async () => await InitializeCameraParametersAsync());
+                    }
+                }
+                else
+                {
+                    Console.WriteLine("[初期化] VRChat.exeは起動していません");
+                    UpdateVRChatStatusLabel();
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[初期化エラー] VRChat状態チェック中にエラー: {ex.Message}");
+            }
+        }
+
+        /// <summary>
         /// VRChatステータスラベルの更新
         /// </summary>
         private void UpdateVRChatStatusLabel()
@@ -1663,6 +1721,10 @@ namespace VSA_launcher
                 
                 // UIの値でOscDataStoreを初期化
                 UpdateOscDataStoreFromUI();
+                
+                // 設定読み込み完了時点で設定適用済みフラグを設定
+                // (appsettings.jsonから設定が読み込まれた場合は適用済みとして扱う)
+                _cameraSettingsApplied = true;
             }
             catch (Exception ex)
             {
@@ -1701,6 +1763,9 @@ namespace VSA_launcher
                 
                 // デフォルト値でOscDataStoreも更新
                 UpdateOscDataStoreFromUI();
+                
+                // デフォルト値設定時点で設定適用済みフラグを設定
+                _cameraSettingsApplied = true;
             }
             catch (Exception ex)
             {

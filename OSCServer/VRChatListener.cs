@@ -11,7 +11,8 @@ namespace VSA_launcher.OSCServer
 {
     /// <summary>
     /// VRChatからのOSCパラメータを受信するリスナークラス
-    /// VRChat標準の9001ポートでリッスンし、10ミリ秒ごとにメッセージをチェックし、1秒ごとにステータスを出力
+    /// VRChat標準の9001ポートでリッスンし、バッチ処理で高効率受信、3秒ごとにステータスを出力
+    /// UDP最適化：バッチ受信、早期フィルタリング、適応的遅延制御を実装
     /// </summary>
     public class VRChatListener : IDisposable
     {
@@ -73,12 +74,27 @@ namespace VSA_launcher.OSCServer
 
                 while (!token.IsCancellationRequested)
                 {
-                    if (_receiver.TryReceive(out OscPacket packet) && packet is OscMessage)
+                    // バッチ処理：利用可能なすべてのメッセージを一度に処理
+                    int processedCount = 0;
+                    const int maxBatchSize = 50; // 一度に処理する最大メッセージ数
+                    
+                    while (_receiver.TryReceive(out OscPacket packet) && packet is OscMessage && processedCount < maxBatchSize)
                     {
-                        // 受信したすべてのメッセージを処理
                         ProcessReceivedPacket(packet);
+                        processedCount++;
                     }
-                    await Task.Delay(10, token);
+                    
+                    // バッチサイズが上限に達した場合はすぐに次のループ
+                    if (processedCount >= maxBatchSize)
+                    {
+                        // CPUを他のタスクに譲る最小限の待機
+                        await Task.Delay(1, token);
+                    }
+                    else
+                    {
+                        // メッセージがない場合のみ少し長めに待機
+                        await Task.Delay(5, token);
+                    }
                 }
             }
             catch (OperationCanceledException) { }
@@ -119,9 +135,19 @@ namespace VSA_launcher.OSCServer
         {
             if (!(packet is OscMessage message)) return;
 
-            // 取り込み対象のパラメータのみコンソールログに出力
-            if (IsTargetParameter(message.Address))
+            // フィルタリング
+            bool isTargetParameter = IsTargetParameter(message.Address);
+            
+            // RichTextBox用ログは取り込み対象のみに限定
+            if (isTargetParameter)
             {
+                string logMessage = $"[{DateTime.Now:HH:mm:ss.fff}] {message.Address}";
+                if (message.Count > 0)
+                {
+                    logMessage += $" = {message[0]}";
+                }
+                LogMessageReceived?.Invoke(logMessage);
+
                 Console.WriteLine($"[OSC受信] {DateTime.Now:HH:mm:ss.fff} - {message.Address}");
                 if (message.Count > 0)
                 {
@@ -131,23 +157,29 @@ namespace VSA_launcher.OSCServer
                 // 開発モード用の受信通知イベント
                 MessageReceived?.Invoke(message.Address, message.Count > 0 ? message[0] : null);
 
-                // ログモード用のイベント（軽量化のため文字列を事前構築）
-                string logMessage = $"[{DateTime.Now:HH:mm:ss.fff}] {message.Address}";
+                // データストアへの反映
                 if (message.Count > 0)
                 {
-                    logMessage += $" = {message[0]}";
+                    // パラメータ名からプレフィックスを除去してデータストアに送信
+                    string parameterName = message.Address.Replace("/avatar/parameters/", "");
+                    bool success = _dataStore.SetParameterValue(parameterName, message[0]);
+                    if (success)
+                    {
+                        Console.WriteLine($"[OSC反映] DataStoreに反映完了: {parameterName} = {message[0]}");
+                    }
+                    else
+                    {
+                        Console.WriteLine($"[OSC反映] DataStore反映失敗: {parameterName} = {message[0]}");
+                    }
                 }
-                LogMessageReceived?.Invoke(logMessage);
             }
 
-            // 新しいアドレスを発見した場合のみデバッグログ出力
+            // 新しいアドレス発見のログ（デバッグ用）のみ軽量化
             bool isNewAddress = _discoveredAddresses.Add(message.Address);
-            if (isNewAddress)
+            if (isNewAddress && isTargetParameter)
             {
                 Debug.WriteLine($"新しいOSCアドレス発見: {message.Address}");
             }
-
-            // データストア更新処理は削除 - UI主導の設定管理に変更
         }
 
         /// <summary>
