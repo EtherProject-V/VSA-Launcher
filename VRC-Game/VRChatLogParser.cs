@@ -43,6 +43,8 @@ namespace VSA_launcher
         public string Username { get; private set; } = "Unknown User";
         public DateTime LastLogParseTime { get; private set; }
         public bool IsValidLogFound { get; private set; }
+        // 最後のルーム参加時間を公開
+        public DateTime LastRoomJoinTime { get; private set; } = DateTime.MinValue;
         
         // 自動更新間隔（ミリ秒）
         private const int AUTO_UPDATE_INTERVAL = 2000; // 2秒
@@ -252,6 +254,7 @@ namespace VSA_launcher
                         worldChangeTime = joinTime;
                         _lastWorldChangeTime = joinTime;
                         _lastRoomJoinTime = joinTime;
+                        LastRoomJoinTime = joinTime; // パブリックプロパティも更新
                         
                         Console.WriteLine($"[DEBUG] インスタンス参加検出: {CurrentWorldName} ({CurrentWorldId}) 時刻: {joinTime}");
                         
@@ -311,6 +314,7 @@ namespace VSA_launcher
                         worldChangeTime = GetEntryTimestamp(logContent, "Entering Room: " + fullWorldEntry);
                         _lastWorldChangeTime = worldChangeTime;
                         _lastRoomJoinTime = worldChangeTime; // ルーム参加時間も更新
+                        LastRoomJoinTime = worldChangeTime; // パブリックプロパティも更新
                         
                         Console.WriteLine($"[DEBUG] ワールド移動検出（代替検出）: {oldWorldName} → {CurrentWorldName}, 時刻: {worldChangeTime}");
                         
@@ -338,6 +342,7 @@ namespace VSA_launcher
                             worldChangeTime = joinTime;
                             _lastWorldChangeTime = joinTime;
                             _lastRoomJoinTime = joinTime; // 明示的なルーム参加時間の更新
+                            LastRoomJoinTime = joinTime; // パブリックプロパティも更新
                         }
                     }
                 }

@@ -2,6 +2,7 @@ using System;
 using System.Threading;
 using System.Windows.Forms;
 using System.Linq;
+using System.Runtime.InteropServices;
 
 namespace VSA_launcher
 {
@@ -9,6 +10,14 @@ namespace VSA_launcher
     {
         // アプリケーション全体で共有するミューテックス
         private static Mutex? _mutex = null;
+
+        // コンソール割り当て用のWindows API
+        [DllImport("kernel32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        static extern bool AllocConsole();
+
+        [DllImport("kernel32.dll")]
+        static extern bool FreeConsole();
 
         /// <summary>
         ///  The main entry point for the application.
@@ -39,6 +48,13 @@ namespace VSA_launcher
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
 
+#if DEBUG
+            // デバッグ時にコンソールウィンドウを表示
+            AllocConsole();
+            Console.WriteLine("[DEBUG] VSA Launcher - Debug Console Initialized");
+            Console.WriteLine("[DEBUG] OSCログはこちらに出力されます");
+#endif
+
             try
             {
                 // アプリケーションの実行
@@ -49,6 +65,11 @@ namespace VSA_launcher
                 // アプリケーション終了時にミューテックスを解放
                 _mutex?.ReleaseMutex();
                 _mutex?.Dispose();
+
+#if DEBUG
+                // デバッグ時にコンソールウィンドウを解放
+                FreeConsole();
+#endif
             }
         }
     }

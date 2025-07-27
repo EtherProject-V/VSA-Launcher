@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Drawing.Imaging;
 using VSA_launcher.OSCServer; // 追加
+using VSA_launcher.VRC_Game; // VRChatInitializationManager用
 using VRC.OSCQuery; // 追加
 
 namespace VSA_launcher
@@ -33,10 +34,19 @@ namespace VSA_launcher
 
         // OSC関連の追加
         private OscDataStore _oscDataStore = null!;
-        private IntegralOscServer _integralOscServer = null!;
-        private VirtualLens2OscServer _virtualLens2OscServer = null!;
+        private VRChatListener _vrchatListener = null!; // VRChatからの受信用リスナー
         private CancellationTokenSource _cancellationTokenSource = null!;
         private OSCQueryService? _oscQueryService;
+        private OSCParameterSender? _oscParameterSender; // OSC送信専用クラス
+
+        // VRChat監視用
+        private System.Windows.Forms.Timer _vrchatMonitorTimer = null!;
+        private bool _isVRChatRunning = false;
+        private bool _hasInitializedCamera = false; // カメラ初期化済みフラグ
+        private bool _cameraSettingsApplied = false; // カメラ設定適用済みフラグ
+        private bool _hasExecutedOscInitialization = false; // アプリセッション中のOSC初期化実行フラグ
+
+        private VRC_Game.VRChatInitializationManager? _vrchatInitializationManager;
 
         // 設定ファイルから読み込んだスタートアップ設定
         private bool _startWithWindows = false;
@@ -70,13 +80,26 @@ namespace VSA_launcher
                     .AdvertiseOSCQuery()
                     .Build();
 
-                _integralOscServer = new OSCServer.IntegralOscServer(_settings.LauncherSettings.IntegralOscPort, _cancellationTokenSource.Token, _oscDataStore, _oscQueryService);
-                _integralOscServer.Start();
-                System.Diagnostics.Debug.WriteLine($"Integral OSC Server started on port {_settings.LauncherSettings.IntegralOscPort}");
+                // OSC設定に基づいてVRChatからの受信用リスナーを開始
+                _vrchatListener = new OSCServer.VRChatListener(_oscDataStore);
+                _vrchatListener.Start();
 
-                _virtualLens2OscServer = new OSCServer.VirtualLens2OscServer(_settings.LauncherSettings.VirtualLens2OscPort, _cancellationTokenSource.Token, _oscDataStore, _oscQueryService);
-                _virtualLens2OscServer.Start();
-                System.Diagnostics.Debug.WriteLine($"VirtualLens2 OSC Server started on port {_settings.LauncherSettings.VirtualLens2OscPort}");
+                // OSC受信イベントの設定
+                _vrchatListener.MessageReceived += OnOscMessageReceived;
+                _vrchatListener.LogMessageReceived += OnOscLogMessageReceived;
+
+                Console.WriteLine($"[OSC初期化] VRChat OSC Listener started - 受信ポート: {_settings.LauncherSettings.OSCSettings.ReceiverPort}");
+                System.Diagnostics.Debug.WriteLine("VRChat OSC Listener started on port 9001");
+
+                // OSCマネージャーを初期化
+                var oscManager = new OSCServer.OscManager(_cancellationTokenSource.Token, _oscDataStore, _oscQueryService);
+                oscManager.Start();
+                oscManager.StartParameterMonitoring();
+                Console.WriteLine($"[OSC初期化] OSC Manager started - 送信先: 127.0.0.1:{_settings.LauncherSettings.OSCSettings.SenderPort}");
+
+                // OSCParameterSenderを初期化
+                _oscParameterSender = new OSCServer.OSCParameterSender(oscManager, _oscDataStore, _settings);
+                Console.WriteLine("[OSC初期化] OSCParameterSender initialized");
 
                 _systemTrayIcon = new SystemTrayIcon(this, notifyIcon, contextMenuStrip1);
 
@@ -151,15 +174,106 @@ namespace VSA_launcher
                 _startWithWindows = _settings.LauncherSettings.StartWithWindows;
                 startup_checkBox.Checked = _startWithWindows;
 
+                // VRChat監視タイマーの初期化
+                _vrchatMonitorTimer = new System.Windows.Forms.Timer();
+                _vrchatMonitorTimer.Interval = 30000; // 30秒ごと
+                _vrchatMonitorTimer.Tick += VRChatMonitorTimer_Tick;
+                _vrchatMonitorTimer.Start();
+
+                if (_oscParameterSender != null)
+                {
+                    _vrchatInitializationManager = new VRC_Game.VRChatInitializationManager(
+                        _logParser,
+                        _oscParameterSender,
+                        UpdateStatusInfo
+                    );
+                    _vrchatInitializationManager.Start();
+                    Console.WriteLine("[Form1] VRChat初期化マネージャーを開始しました");
+                }
+
+                // カメラUI制御の初期化
+                InitializeCameraControls();
+
+                // カメラ設定ボタンのイベントハンドラ追加
+                if (CameraSettingApply_button != null)
+                {
+                    CameraSettingApply_button.Click += CameraSettingApply_button_Click;
+                    CameraSettingApply_button.Text = "設定を保存"; // ボタンテキストを設定
+                }
+
+                // 開発モード・OSCログ関連のイベントハンドラ追加
+                if (devMode_checkBox != null)
+                {
+                    devMode_checkBox.CheckedChanged += (s, e) =>
+                    {
+                        // 開発モードOFF時はOSCステータスラベルを非表示
+                        if (label5 != null)
+                        {
+                            label5.Visible = devMode_checkBox.Checked;
+                        }
+
+                        // OSCStatusタブの表示/非表示制御
+                        if (tabControl != null && OSCStatus != null)
+                        {
+                            if (devMode_checkBox.Checked)
+                            {
+                                // 開発モードON: OSCStatusタブを表示
+                                if (!tabControl.TabPages.Contains(OSCStatus))
+                                {
+                                    tabControl.TabPages.Add(OSCStatus);
+                                }
+                            }
+                            else
+                            {
+                                // 開発モードOFF: OSCStatusタブを非表示
+                                if (tabControl.TabPages.Contains(OSCStatus))
+                                {
+                                    tabControl.TabPages.Remove(OSCStatus);
+                                }
+                            }
+                        }
+                    };
+                }
+
+                if (OSCLog_checkBox != null)
+                {
+                    OSCLog_checkBox.CheckedChanged += (s, e) =>
+                    {
+                        // OSCログOFF時はテキストボックスをクリア
+                        if (!OSCLog_checkBox.Checked && OSCLog_richTextBox != null)
+                        {
+                            OSCLog_richTextBox.Clear();
+                        }
+                    };
+                }
+
+                // OSCStatusタブの初期状態を設定（開発モードがOFFの場合は非表示）
+                if (tabControl != null && OSCStatus != null && devMode_checkBox != null)
+                {
+                    if (!devMode_checkBox.Checked && tabControl.TabPages.Contains(OSCStatus))
+                    {
+                        tabControl.TabPages.Remove(OSCStatus);
+                    }
+                }
+
+                // CameraSettingsタブの初期状態を設定（cameraSettomg_checkBoxがOFFの場合は非表示）
+                if (tabControl != null && CameraSettings != null && cameraSettomg_checkBox != null)
+                {
+                    if (!cameraSettomg_checkBox.Checked && tabControl.TabPages.Contains(CameraSettings))
+                    {
+                        tabControl.TabPages.Remove(CameraSettings);
+                    }
+                }
+
                 // スタートアップの実際の状態を反映
             }
             catch (Exception ex)
             {
-MessageBox.Show($"アプリケーション初期化エラー: {ex.Message}\n\nスタックトレース: {ex.StackTrace}",
-               "起動エラー",
-               MessageBoxButtons.OK,
-               MessageBoxIcon.Error);
-Application.Exit();
+                MessageBox.Show($"アプリケーション初期化エラー: {ex.Message}\n\nスタックトレース: {ex.StackTrace}",
+                               "起動エラー",
+                               MessageBoxButtons.OK,
+                               MessageBoxIcon.Error);
+                Application.Exit();
             }
         }
 
@@ -206,7 +320,7 @@ Application.Exit();
         }
 
         // コンボボックス変更イベントハンドラ
-        private void FileRename_ComboBox_SelectedIndexChanged(object sender, EventArgs e)
+        private void FileRename_ComboBox_SelectedIndexChanged(object? sender, EventArgs e)
         {
             // 選択されたインデックスに基づいて設定を更新
             int selectedIndex = fileRename_comboBox.SelectedIndex;
@@ -264,9 +378,11 @@ Application.Exit();
             // スタートアップ設定の初期化
             InitializeStartupSetting();
 
+            // VRChatの初期状態をチェック（アプリ起動時の既存VRChat.exe検知）
+            CheckInitialVRChatStatus();
 
-            // 初期状態のステータス表示
-            UpdateStatusInfo("アプリケーション初期化完了", "監視準備中...");
+            // 初期状態のステータス表示（カメラモード情報を含む）
+            UpdateStatusInfoWithCamera("アプリケーション初期化完了", "監視準備中...");
 
             // スクリーンショットフォルダが設定済みなら監視を開始
             if (!string.IsNullOrEmpty(_settings.ScreenshotPath) && Directory.Exists(_settings.ScreenshotPath))
@@ -339,20 +455,20 @@ Application.Exit();
             }
         }
 
-        private void metadataEnabled_CheckedChanged(object sender, EventArgs e)
+        private void metadataEnabled_CheckedChanged(object? sender, EventArgs e)
         {
             _settings.Metadata.Enabled = metadataEnabled_checkBox.Checked;
             SettingsManager.SaveSettings(_settings);
         }
 
-        private void checkBox3_CheckedChanged(object sender, EventArgs e)
+        private void checkBox3_CheckedChanged(object? sender, EventArgs e)
         {
             fileSubdivision_Group.Enabled = fileSubdivision_checkBox.Checked;
             _settings.FolderStructure.Enabled = fileSubdivision_checkBox.Checked;
             SettingsManager.SaveSettings(_settings);
         }
 
-        private void monthCompression_CheckedChanged(object sender, EventArgs e)
+        private void monthCompression_CheckedChanged(object? sender, EventArgs e)
         {
             _settings.Compression.AutoCompress = monthCompression_checkBox.Checked;
             SettingsManager.SaveSettings(_settings);
@@ -381,6 +497,23 @@ Application.Exit();
             }
 
             startingState_toolStripStatusLabel.Text = statusMessage;
+            fileStatus_toolStripStatusLabel1.Text = fileStatusMessage;
+        }
+
+        // カメラモード情報を含むステータス表示の更新
+        public void UpdateStatusInfoWithCamera(string statusMessage, string fileStatusMessage)
+        {
+            // UIスレッドでの実行を保証
+            if (InvokeRequired)
+            {
+                BeginInvoke(new Action(() => UpdateStatusInfoWithCamera(statusMessage, fileStatusMessage)));
+                return;
+            }
+
+            // カメラモード情報を取得
+            string cameraStatus = _oscDataStore.GetCameraModeStatus();
+
+            startingState_toolStripStatusLabel.Text = $"{statusMessage} | {cameraStatus}";
             fileStatus_toolStripStatusLabel1.Text = fileStatusMessage;
         }
 
@@ -586,8 +719,12 @@ Application.Exit();
             // 定期的なステータス更新
             if (_fileWatcher.IsWatching)
             {
-                fileStatus_toolStripStatusLabel1.Text =
-                    $"監視: {_fileWatcher.DetectedFilesCount} 処理: {_fileWatcher.ProcessedFilesCount} エラー: {_fileWatcher.ErrorCount}";
+                // カメラモード情報を含むステータス更新
+                string fileStatus = $"監視: {_fileWatcher.DetectedFilesCount} 処理: {_fileWatcher.ProcessedFilesCount} エラー: {_fileWatcher.ErrorCount}";
+                string cameraStatus = _oscDataStore.GetCameraModeStatus();
+
+                startingState_toolStripStatusLabel.Text = $"監視中 | {cameraStatus}";
+                fileStatus_toolStripStatusLabel1.Text = fileStatus;
             }
         }
 
@@ -602,12 +739,14 @@ Application.Exit();
             {
                 _fileWatcher?.Dispose();
                 _statusUpdateTimer?.Dispose();
+                _vrchatMonitorTimer?.Dispose(); // VRChat監視タイマーのDispose追加
+                _vrchatInitializationManager?.Dispose(); // VRChat初期化マネージャーのDispose追加
                 _systemTrayIcon?.Dispose();
                 _cancellationTokenSource?.Cancel(); // OSCサーバーに停止を通知
-                _integralOscServer?.Dispose();
-                _virtualLens2OscServer?.Dispose();
+                _vrchatListener?.Dispose(); // VRChatリスナーを
                 _cancellationTokenSource?.Dispose();
                 _oscQueryService?.Dispose(); // 追加
+                _oscParameterSender = null; // OSCParameterSenderをnull化
                 components?.Dispose();
             }
             base.Dispose(disposing);
@@ -715,49 +854,49 @@ Application.Exit();
             photographName_textBox.Text = string.Empty;
 
             // メタデータを表示
-            if (metadata.TryGetValue("WorldName", out string worldName))
+            if (metadata.TryGetValue("WorldName", out string? worldName) && worldName != null)
             {
                 worldName_richTextBox.Text = worldName;
             }
 
-            if (metadata.TryGetValue("Usernames", out string usernames)) // 'Friends'を'Usernames'に変更
+            if (metadata.TryGetValue("Usernames", out string? usernames) && usernames != null) // 'Friends'を'Usernames'に変更
             {
                 worldFriends_richTextBox.Text = usernames;
             }
 
-            if (metadata.TryGetValue("CaptureTime", out string captureTime))
+            if (metadata.TryGetValue("CaptureTime", out string? captureTime) && captureTime != null)
             {
                 photoTime_textBox.Text = captureTime;
             }
 
-            if (metadata.TryGetValue("User", out string user)) // 'Username'を'User'に変更
+            if (metadata.TryGetValue("User", out string? user) && user != null) // 'Username'を'User'に変更
             {
                 photographName_textBox.Text = user;
             }
 
             // カメラの使用状況を表示
             CameraInfo_richTextBox.Text = string.Empty; // テキストボックスをクリア
-            bool isIntegral = metadata.TryGetValue("IsIntegral", out string isIntegralStr) && isIntegralStr.ToLower() == "true";
-            bool isVirtualLens2 = metadata.TryGetValue("IsVirtualLens2", out string isVirtualLens2Str) && isVirtualLens2Str.ToLower() == "true";
+            bool isIntegral = metadata.TryGetValue("IsIntegral", out string? isIntegralStr) && isIntegralStr?.ToLower() == "true";
+            bool isVirtualLens2 = metadata.TryGetValue("IsVirtualLens2", out string? isVirtualLens2Str) && isVirtualLens2Str?.ToLower() == "true";
 
             if (isIntegral)
             {
                 CameraUse_textBox.Text = "Integral";
                 StringBuilder sb = new StringBuilder();
-                if (metadata.TryGetValue("Integral_Aperture", out string aperture)) sb.AppendLine($"Aperture: {aperture}");
-                if (metadata.TryGetValue("Integral_FocalLength", out string focalLength)) sb.AppendLine($"FocalLength: {focalLength}");
-                if (metadata.TryGetValue("Integral_Exposure", out string exposure)) sb.AppendLine($"Exposure: {exposure}");
-                if (metadata.TryGetValue("Integral_ShutterSpeed", out string shutterSpeed)) sb.AppendLine($"ShutterSpeed: {shutterSpeed}");
-                if (metadata.TryGetValue("Integral_BokehShape", out string bokehShape)) sb.AppendLine($"BokehShape: {bokehShape}");
+                if (metadata.TryGetValue("Integral_Aperture", out string? aperture) && aperture != null) sb.AppendLine($"Aperture: {aperture}");
+                if (metadata.TryGetValue("Integral_FocalLength", out string? focalLength) && focalLength != null) sb.AppendLine($"FocalLength: {focalLength}");
+                if (metadata.TryGetValue("Integral_Exposure", out string? exposure) && exposure != null) sb.AppendLine($"Exposure: {exposure}");
+                if (metadata.TryGetValue("Integral_ShutterSpeed", out string? shutterSpeed) && shutterSpeed != null) sb.AppendLine($"ShutterSpeed: {shutterSpeed}");
+                if (metadata.TryGetValue("Integral_BokehShape", out string? bokehShape) && bokehShape != null) sb.AppendLine($"BokehShape: {bokehShape}");
                 CameraInfo_richTextBox.Text = sb.ToString();
             }
             else if (isVirtualLens2)
             {
                 CameraUse_textBox.Text = "VirtualLens2";
                 StringBuilder sb = new StringBuilder();
-                if (metadata.TryGetValue("VirtualLens2_Aperture", out string aperture)) sb.AppendLine($"Aperture: {aperture}");
-                if (metadata.TryGetValue("VirtualLens2_FocalLength", out string focalLength)) sb.AppendLine($"FocalLength: {focalLength}");
-                if (metadata.TryGetValue("VirtualLens2_Exposure", out string exposure)) sb.AppendLine($"Exposure: {exposure}");
+                if (metadata.TryGetValue("VirtualLens2_Aperture", out string? aperture) && aperture != null) sb.AppendLine($"Aperture: {aperture}");
+                if (metadata.TryGetValue("VirtualLens2_FocalLength", out string? focalLength) && focalLength != null) sb.AppendLine($"FocalLength: {focalLength}");
+                if (metadata.TryGetValue("VirtualLens2_Exposure", out string? exposure) && exposure != null) sb.AppendLine($"Exposure: {exposure}");
                 CameraInfo_richTextBox.Text = sb.ToString();
             }
             else
@@ -778,7 +917,7 @@ Application.Exit();
         }
 
         // PictureBoxのクリックイベント - 画像を外部ビューアで開く
-        private void PngPreview_pictureBox_Click(object sender, EventArgs e)
+        private void PngPreview_pictureBox_Click(object? sender, EventArgs e)
         {
             if (!string.IsNullOrEmpty(_currentMetadataImagePath) && File.Exists(_currentMetadataImagePath))
             {
@@ -939,7 +1078,7 @@ Application.Exit();
         /// <summary>
         /// スタートアップチェックボックスの変更イベントハンドラ
         /// </summary>
-        private void startUp_checkBox_CheckedChanged(object sender, EventArgs e)
+        private void startUp_checkBox_CheckedChanged(object? sender, EventArgs e)
         {
             try
             {
@@ -1053,6 +1192,815 @@ Application.Exit();
         }
 
         private void CameraInfo_label_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void label4_Click_1(object sender, EventArgs e)
+        {
+
+        }
+
+        #region VRChat監視とカメラ制御機能
+
+        /// <summary>
+        /// VRChat.exe監視タイマーのTick処理
+        /// </summary>
+        private void VRChatMonitorTimer_Tick(object? sender, EventArgs e)
+        {
+            bool currentVRChatStatus = IsVRChatRunning();
+
+            if (currentVRChatStatus != _isVRChatRunning)
+            {
+                _isVRChatRunning = currentVRChatStatus;
+
+                // UIスレッドでの実行を保証
+                if (InvokeRequired)
+                {
+                    BeginInvoke(new Action(() => UpdateVRChatStatusLabel()));
+                }
+                else
+                {
+                    UpdateVRChatStatusLabel();
+                }
+
+                // VRChat起動時のOSC初期化（新しいロジック）
+                if (_isVRChatRunning && !_hasExecutedOscInitialization)
+                {
+                    // cameraSettomg_checkBoxがtrueかつ設定適用済みの場合のみ実行
+                    if ((cameraSettomg_checkBox?.Checked == true) && _cameraSettingsApplied)
+                    {
+                        Console.WriteLine("[VRChat検知] VRChat起動検知 - 2分後にOSC初期化を実行します");
+                        _hasExecutedOscInitialization = true; // アプリセッション中1回だけのフラグ
+
+                        // 2分後にOSC初期化を実行
+                        _ = Task.Run(async () =>
+                        {
+                            await Task.Delay(TimeSpan.FromMinutes(2));
+                            await ExecuteOscCameraInitialization();
+                        });
+                    }
+                    else
+                    {
+                        // 条件を満たさない場合はログ出力のみ
+                        Console.WriteLine($"[VRChat検知] OSC初期化条件未達成 - カメラ設定有効: {cameraSettomg_checkBox?.Checked}, 設定適用済み: {_cameraSettingsApplied}");
+                    }
+                }
+
+                // VRChat起動時の従来のカメラ初期化（互換性のため残す）
+                if (_isVRChatRunning && !_hasInitializedCamera)
+                {
+                    Task.Run(async () => await InitializeCameraParametersAsync());
+                }
+                else if (!_isVRChatRunning)
+                {
+                    // VRChat終了時にフラグをリセット（従来のフラグのみ、セッション用フラグはリセットしない）
+                    _hasInitializedCamera = false;
+                }
+            }
+        }
+
+        /// <summary>
+        /// VRChat.exeが起動しているかチェック
+        /// </summary>
+        private bool IsVRChatRunning()
+        {
+            try
+            {
+                Process[] vrchatProcesses = Process.GetProcessesByName("VRChat");
+                return vrchatProcesses.Length > 0;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// アプリ起動時のVRChat状態チェック（既に起動している場合の処理）
+        /// </summary>
+        private void CheckInitialVRChatStatus()
+        {
+            try
+            {
+                _isVRChatRunning = IsVRChatRunning();
+                
+                // VRChatが既に起動している場合の処理
+                if (_isVRChatRunning)
+                {
+                    Console.WriteLine("[初期化] VRChat.exeが既に起動しています");
+                    
+                    // UIの更新
+                    UpdateVRChatStatusLabel();
+                    
+                    // カメラ設定が有効で設定が適用済みの場合、2分後にOSC初期化を実行
+                    if ((cameraSettomg_checkBox?.Checked == true) && _cameraSettingsApplied)
+                    {
+                        if (!_hasExecutedOscInitialization)
+                        {
+                            Console.WriteLine("[初期化] アプリ起動時VRChat検知 - 2分後にOSC初期化を実行します");
+                            _hasExecutedOscInitialization = true;
+
+                            // 2分後にOSC初期化を実行
+                            _ = Task.Run(async () =>
+                            {
+                                await Task.Delay(TimeSpan.FromMinutes(2));
+                                await ExecuteOscCameraInitialization();
+                            });
+                        }
+                    }
+                    else
+                    {
+                        Console.WriteLine($"[初期化] OSC初期化条件未達成 - カメラ設定有効: {cameraSettomg_checkBox?.Checked}, 設定適用済み: {_cameraSettingsApplied}");
+                    }
+                    
+                    // 従来のカメラ初期化も実行
+                    if (!_hasInitializedCamera)
+                    {
+                        Task.Run(async () => await InitializeCameraParametersAsync());
+                    }
+                }
+                else
+                {
+                    Console.WriteLine("[初期化] VRChat.exeは起動していません");
+                    UpdateVRChatStatusLabel();
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[初期化エラー] VRChat状態チェック中にエラー: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// VRChatステータスラベルの更新
+        /// </summary>
+        private void UpdateVRChatStatusLabel()
+        {
+            if (VRCStartStatus_toolStripStatusLabel != null)
+            {
+                VRCStartStatus_toolStripStatusLabel.Text = _isVRChatRunning ? "VRC: 起動中" : "VRC: 停止中";
+            }
+        }
+
+        /// <summary>
+        /// カメラコントロールの初期化
+        /// </summary>
+        private void InitializeCameraControls()
+        {
+            // cameraSettomg_checkBoxのイベントハンドラ設定（CameraSetting_groupBoxの表示制御用）
+            if (cameraSettomg_checkBox != null)
+            {
+                cameraSettomg_checkBox.CheckedChanged += CameraSettomg_CheckBox_CheckedChanged;
+            }
+
+            // useVirtuallens2およびuseIntegralチェックボックスのイベントハンドラ設定
+            if (useVirtuallens2_checkBox != null)
+                useVirtuallens2_checkBox.CheckedChanged += UseVirtuallens2_CheckBox_CheckedChanged;
+            if (useIntegral_checkBox != null)
+                useIntegral_checkBox.CheckedChanged += UseIntegral_CheckBox_CheckedChanged;
+
+            // 設定からUIに値を読み込み
+            LoadCameraSettingsToUI();
+
+            // チェックボックスの状態に応じてグループボックスを表示/非表示
+            if (useVirtuallens2_checkBox != null && VirtualLens2_groupBox != null)
+                VirtualLens2_groupBox.Visible = useVirtuallens2_checkBox.Checked;
+            if (useIntegral_checkBox != null && Integral_groupBox != null)
+                Integral_groupBox.Visible = useIntegral_checkBox.Checked;
+
+            // 初期状態の設定
+            UpdateCameraControlsState();
+        }
+
+        /// <summary>
+        /// useCameraチェックボックスの変更イベントハンドラ（useCamera_groupBoxの有効/無効制御用）
+        /// </summary>
+        private void UseCamera_CheckBox_CheckedChanged(object? sender, EventArgs e)
+        {
+            UpdateUseCameraGroupBoxState();
+        }
+
+        /// <summary>
+        /// cameraSettomg_checkBoxの変更イベントハンドラ（CameraSetting_groupBoxの表示制御用）
+        /// </summary>
+        private void CameraSettomg_CheckBox_CheckedChanged(object? sender, EventArgs e)
+        {
+            UpdateCameraSettingGroupBoxState();
+            UpdateCameraSettingsTabState();
+        }
+
+        /// <summary>
+        /// カメラモードラジオボタンの変更イベントハンドラ
+        /// </summary>
+        private void CameraMode_RadioButton_CheckedChanged(object? sender, EventArgs e)
+        {
+            // 何らかの追加処理が必要な場合はここに記述
+        }
+        
+        /// <summary>
+        /// useVirtuallens2_checkBoxの変更イベントハンドラ
+        /// </summary>
+        private void UseVirtuallens2_CheckBox_CheckedChanged(object? sender, EventArgs e)
+        {
+            bool enabled = useVirtuallens2_checkBox?.Checked ?? false;
+            // パラメータグループの表示/非表示
+            if (VirtualLens2_groupBox != null)
+                VirtualLens2_groupBox.Visible = enabled;
+            // OSCでカメラ有効化パラメータ送信
+            _oscParameterSender?.SendCameraEnableParameter(CameraType.VirtualLens2, enabled);
+            // データストア更新
+            if (_oscDataStore != null)
+                _oscDataStore.IsVirtualLens2Active = enabled;
+        }
+
+        /// <summary>
+        /// useIntegral_checkBoxの変更イベントハンドラ
+        /// </summary>
+        private void UseIntegral_CheckBox_CheckedChanged(object? sender, EventArgs e)
+        {
+            bool enabled = useIntegral_checkBox?.Checked ?? false;
+            // パラメータグループの表示/非表示
+            if (Integral_groupBox != null)
+                Integral_groupBox.Visible = enabled;
+            // OSCでカメラ有効化パラメータ送信
+            _oscParameterSender?.SendCameraEnableParameter(CameraType.Integral, enabled);
+            // データストア更新
+            if (_oscDataStore != null)
+                _oscDataStore.IsIntegralActive = enabled;
+        }
+
+        /// <summary>
+        /// useCamera_groupBoxの状態を更新（有効/無効制御）
+        /// </summary>
+        private void UpdateUseCameraGroupBoxState()
+        {
+
+        }
+
+        /// <summary>
+        /// CameraSetting_groupBoxの状態を更新（表示/非表示制御）
+        /// </summary>
+        private void UpdateCameraSettingGroupBoxState()
+        {
+            bool cameraSettingEnabled = cameraSettomg_checkBox?.Checked ?? false;
+
+            // CameraSetting_groupBoxの表示/非表示制御
+            if (CameraSetting_groupBox != null)
+            {
+                CameraSetting_groupBox.Visible = cameraSettingEnabled;
+            }
+        }
+
+        /// <summary>
+        /// CameraSettingsタブの表示/非表示制御
+        /// </summary>
+        private void UpdateCameraSettingsTabState()
+        {
+            bool cameraSettingEnabled = cameraSettomg_checkBox?.Checked ?? false;
+
+            // CameraSettingsタブの表示/非表示制御
+            if (tabControl != null && CameraSettings != null)
+            {
+                if (cameraSettingEnabled)
+                {
+                    // カメラ設定ON: CameraSettingsタブを表示
+                    if (!tabControl.TabPages.Contains(CameraSettings))
+                    {
+                        tabControl.TabPages.Add(CameraSettings);
+                    }
+                }
+                else
+                {
+                    // カメラ設定OFF: CameraSettingsタブを非表示
+                    if (tabControl.TabPages.Contains(CameraSettings))
+                    {
+                        tabControl.TabPages.Remove(CameraSettings);
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// カメラコントロールの状態を更新（統合メソッド）
+        /// </summary>
+        private void UpdateCameraControlsState()
+        {
+            UpdateUseCameraGroupBoxState();
+            UpdateCameraSettingGroupBoxState();
+            UpdateCameraSettingsTabState();
+        }
+
+        /// <summary>
+        /// カメラパラメータの初期化（VRChat起動時）
+        /// </summary>
+        private async Task InitializeCameraParametersAsync()
+        {
+            try
+            {
+
+
+                Debug.WriteLine("VRChat起動検知 - カメラパラメータ初期化開始");
+
+                // 少し待機してからパラメータ送信
+                await Task.Delay(2000);
+
+                _hasInitializedCamera = true;
+                Debug.WriteLine("カメラパラメータ初期化完了");
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"カメラ初期化エラー: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// VirtualLens2パラメータの初期化
+        /// </summary>
+        private async Task InitializeVirtualLens2ParametersAsync()
+        {
+            try
+            {
+                // Enableパラメータを有効化
+                _oscParameterSender?.SendCameraEnableParameter(CameraType.VirtualLens2, true);
+                await Task.Delay(100);
+                _oscParameterSender?.SendCameraEnableParameter(CameraType.VirtualLens2, false);
+                await Task.Delay(100);
+
+                // TextBoxから値を取得して送信（0~100を0~1に変換）
+                if (VirtualLens2_Aperture_textBox != null && float.TryParse(VirtualLens2_Aperture_textBox.Text, out float aperture))
+                {
+                    _oscParameterSender?.SendVirtualLens2Parameter("VirtualLens2_Aperture", aperture / 100.0f);
+                    await Task.Delay(100);
+                }
+
+                if (VirtualLens2_FocalLength_textBox != null && float.TryParse(VirtualLens2_FocalLength_textBox.Text, out float focalLength))
+                {
+                    _oscParameterSender?.SendVirtualLens2Parameter("VirtualLens2_FocalLength", focalLength / 100.0f);
+                    await Task.Delay(100);
+                }
+
+                if (VirtualLens2_Exposure_textBox != null && float.TryParse(VirtualLens2_Exposure_textBox.Text, out float exposure))
+                {
+                    _oscParameterSender?.SendVirtualLens2Parameter("VirtualLens2_Exposure", exposure / 100.0f);
+                    await Task.Delay(100);
+                }
+
+                Debug.WriteLine("VirtualLens2パラメータ初期化完了");
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"VirtualLens2初期化エラー: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Integralパラメータの初期化
+        /// </summary>
+        private async Task InitializeIntegralParametersAsync()
+        {
+            try
+            {
+                // Enableパラメータを有効化
+                _oscParameterSender?.SendCameraEnableParameter(CameraType.Integral, true);
+                await Task.Delay(100);
+                _oscParameterSender?.SendCameraEnableParameter(CameraType.Integral, false);
+                await Task.Delay(100);
+
+                // TextBoxから値を取得して送信（0~100を0~1に変換）
+                if (Integral_Aperture_textBox != null && float.TryParse(Integral_Aperture_textBox.Text, out float aperture))
+                {
+                    _oscParameterSender?.SendIntegralParameter("Integral_Aperture", aperture / 100.0f);
+                    await Task.Delay(100);
+                }
+
+                if (Integral_FocalLength_textBox != null && float.TryParse(Integral_FocalLength_textBox.Text, out float focalLength))
+                {
+                    _oscParameterSender?.SendIntegralParameter("Integral_FocalLength", focalLength / 100.0f);
+                    await Task.Delay(100);
+                }
+
+                if (Integral_Exposure_textBox != null && float.TryParse(Integral_Exposure_textBox.Text, out float exposure))
+                {
+                    _oscParameterSender?.SendIntegralParameter("Integral_Exposure", exposure / 100.0f);
+                    await Task.Delay(100);
+                }
+
+                // IntegralのShutterSpeedとBokehShapeも初期化
+                if (Integral_BokeShape_textBox != null && float.TryParse(Integral_BokeShape_textBox.Text, out float shutterSpeed))
+                {
+                    _oscParameterSender?.SendIntegralParameter("Integral_ShutterSpeed", shutterSpeed / 100.0f);
+                    await Task.Delay(100);
+                }
+
+                if (Integral_ShutterSpeed_textBox != null && float.TryParse(Integral_ShutterSpeed_textBox.Text, out float bokehShape))
+                {
+                    // BokehShapeは整数値として送信
+                    _oscParameterSender?.SendIntegralParameter("Integral_BokehShape", (int)(bokehShape / 100.0f * 10)); // 0-10の範囲と仮定
+                    await Task.Delay(100);
+                }
+
+                Debug.WriteLine("Integralパラメータ初期化完了");
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Integral初期化エラー: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// カメラ設定ボタンのクリック処理
+        /// </summary>
+        private void CameraSettingApply_button_Click(object? sender, EventArgs e)
+        {
+            try
+            {
+                // 現在のTextBoxの値を設定に保存
+                SaveCameraSettingsFromUI();
+
+                // 設定ファイルに書き込み
+                SettingsManager.SaveSettings(_settings);
+
+                // 設定適用フラグを設定
+                _cameraSettingsApplied = true;
+
+                // 成功メッセージ
+                UpdateStatusInfo("設定保存完了", "カメラ設定がappsettings.jsonに保存されました");
+
+                MessageBox.Show("カメラ設定を保存しました。", "保存完了", MessageBoxButtons.OK, MessageBoxIcon.Information);
+
+                // VRChatが起動中で、cameraSettomg_checkBoxがtrueの場合、即座にOSC送信を実行
+                if (_isVRChatRunning && (cameraSettomg_checkBox?.Checked == true))
+                {
+                    Console.WriteLine("[カメラ設定] VRChat起動中のため、即座にOSC送信を実行");
+                    _ = Task.Run(async () => await ExecuteOscCameraInitialization());
+                }
+            }
+            catch (Exception ex)
+            {
+                UpdateStatusInfo("設定保存エラー", $"エラー: {ex.Message}");
+                MessageBox.Show($"設定の保存に失敗しました。\n{ex.Message}", "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        /// <summary>
+        /// UIの値を設定クラスに保存
+        /// </summary>
+        private void SaveCameraSettingsFromUI()
+        {
+            // カメラ設定の有効/無効（cameraSettomg_checkBoxを使用）
+            _settings.CameraSettings.Enabled = cameraSettomg_checkBox?.Checked ?? false;
+
+            // VirtualLens2設定
+            if (int.TryParse(VirtualLens2_Aperture_textBox?.Text, out int vl2Aperture))
+            {
+                _settings.CameraSettings.VirtualLens2.Aperture = Math.Max(0, Math.Min(100, vl2Aperture));
+            }
+            if (int.TryParse(VirtualLens2_FocalLength_textBox?.Text, out int vl2FocalLength))
+            {
+                _settings.CameraSettings.VirtualLens2.FocalLength = Math.Max(0, Math.Min(100, vl2FocalLength));
+            }
+            if (int.TryParse(VirtualLens2_Exposure_textBox?.Text, out int vl2Exposure))
+            {
+                _settings.CameraSettings.VirtualLens2.Exposure = Math.Max(0, Math.Min(100, vl2Exposure));
+            }
+
+            // Integral設定
+            if (int.TryParse(Integral_Aperture_textBox?.Text, out int intAperture))
+            {
+                _settings.CameraSettings.Integral.Aperture = Math.Max(0, Math.Min(100, intAperture));
+            }
+            if (int.TryParse(Integral_FocalLength_textBox?.Text, out int intFocalLength))
+            {
+                _settings.CameraSettings.Integral.FocalLength = Math.Max(0, Math.Min(100, intFocalLength));
+            }
+            if (int.TryParse(Integral_Exposure_textBox?.Text, out int intExposure))
+            {
+                _settings.CameraSettings.Integral.Exposure = Math.Max(0, Math.Min(100, intExposure));
+            }
+            if (int.TryParse(Integral_BokeShape_textBox?.Text, out int intShutterSpeed))
+            {
+                _settings.CameraSettings.Integral.ShutterSpeed = Math.Max(0, Math.Min(100, intShutterSpeed));
+            }
+            if (int.TryParse(Integral_ShutterSpeed_textBox?.Text, out int intBokehShape))
+            {
+                _settings.CameraSettings.Integral.BokehShape = Math.Max(0, Math.Min(100, intBokehShape));
+            }
+            UpdateOscDataStoreFromUI();
+        }
+
+        /// <summary>
+        /// 設定をUIに反映
+        /// </summary>
+        private void LoadCameraSettingsToUI()
+        {
+            try
+            {
+                // 設定が存在しない場合はデフォルト値で初期化
+                if (_settings?.CameraSettings == null)
+                {
+                    Debug.WriteLine("カメラ設定がnullです。デフォルト値で初期化します。");
+                    if (_settings == null)
+                    {
+                        _settings = new AppSettings();
+                    }
+                    _settings.CameraSettings = new CameraSettings();
+                }
+
+                // カメラ設定の有効/無効（cameraSettomg_checkBoxを使用）
+                if (cameraSettomg_checkBox != null)
+                {
+                    cameraSettomg_checkBox.Checked = _settings.CameraSettings.Enabled;
+                }
+
+                // VirtualLens2設定をUIに反映
+                if (_settings.CameraSettings.VirtualLens2 == null)
+                {
+                    _settings.CameraSettings.VirtualLens2 = new VirtualLens2Settings();
+                }
+
+                if (VirtualLens2_Aperture_textBox != null)
+                {
+                    VirtualLens2_Aperture_textBox.Text = _settings.CameraSettings.VirtualLens2.Aperture.ToString();
+                }
+                if (VirtualLens2_FocalLength_textBox != null)
+                {
+                    VirtualLens2_FocalLength_textBox.Text = _settings.CameraSettings.VirtualLens2.FocalLength.ToString();
+                }
+                if (VirtualLens2_Exposure_textBox != null)
+                {
+                    VirtualLens2_Exposure_textBox.Text = _settings.CameraSettings.VirtualLens2.Exposure.ToString();
+                }
+
+                // Integral設定をUIに反映
+                if (_settings.CameraSettings.Integral == null)
+                {
+                    _settings.CameraSettings.Integral = new IntegralSettings();
+                }
+
+                if (Integral_Aperture_textBox != null)
+                {
+                    Integral_Aperture_textBox.Text = _settings.CameraSettings.Integral.Aperture.ToString();
+                }
+                if (Integral_FocalLength_textBox != null)
+                {
+                    Integral_FocalLength_textBox.Text = _settings.CameraSettings.Integral.FocalLength.ToString();
+                }
+                if (Integral_Exposure_textBox != null)
+                {
+                    Integral_Exposure_textBox.Text = _settings.CameraSettings.Integral.Exposure.ToString();
+                }
+                if (Integral_BokeShape_textBox != null)
+                {
+                    Integral_BokeShape_textBox.Text = _settings.CameraSettings.Integral.ShutterSpeed.ToString();
+                }
+                if (Integral_ShutterSpeed_textBox != null)
+                {
+                    Integral_ShutterSpeed_textBox.Text = _settings.CameraSettings.Integral.BokehShape.ToString();
+                }
+
+                Debug.WriteLine("カメラ設定をUIに読み込み完了");
+                
+                // UIの値でOscDataStoreを初期化
+                UpdateOscDataStoreFromUI();
+                
+                // 設定読み込み完了時点で設定適用済みフラグを設定
+                // (appsettings.jsonから設定が読み込まれた場合は適用済みとして扱う)
+                _cameraSettingsApplied = true;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"カメラ設定UI読み込みエラー: {ex.Message}");
+                // エラーが発生した場合はデフォルト値を設定
+                SetDefaultCameraValues();
+            }
+        }
+
+        /// <summary>
+        /// デフォルトのカメラ値をUIに設定
+        /// </summary>
+        private void SetDefaultCameraValues()
+        {
+            try
+            {
+                if (VirtualLens2_Aperture_textBox != null)
+                    VirtualLens2_Aperture_textBox.Text = "50";
+                if (VirtualLens2_FocalLength_textBox != null)
+                    VirtualLens2_FocalLength_textBox.Text = "50";
+                if (VirtualLens2_Exposure_textBox != null)
+                    VirtualLens2_Exposure_textBox.Text = "50";
+
+                if (Integral_Aperture_textBox != null)
+                    Integral_Aperture_textBox.Text = "50";
+                if (Integral_FocalLength_textBox != null)
+                    Integral_FocalLength_textBox.Text = "50";
+                if (Integral_Exposure_textBox != null)
+                    Integral_Exposure_textBox.Text = "50";
+                if (Integral_BokeShape_textBox != null)
+                    Integral_BokeShape_textBox.Text = "50";
+                if (Integral_ShutterSpeed_textBox != null)
+                    Integral_ShutterSpeed_textBox.Text = "50";
+
+                Debug.WriteLine("デフォルトカメラ値を設定しました");
+                
+                // デフォルト値でOscDataStoreも更新
+                UpdateOscDataStoreFromUI();
+                
+                // デフォルト値設定時点で設定適用済みフラグを設定
+                _cameraSettingsApplied = true;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"デフォルト値設定エラー: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// UIのTextBox値からOscDataStoreを更新
+        /// </summary>
+        private void UpdateOscDataStoreFromUI()
+        {
+            try
+            {
+                if (_oscDataStore == null)
+                {
+                    Debug.WriteLine("OscDataStoreが初期化されていません");
+                    return;
+                }
+
+                // VirtualLens2設定
+                if (VirtualLens2_Aperture_textBox != null && float.TryParse(VirtualLens2_Aperture_textBox.Text, out float vl2Aperture))
+                {
+                    _oscDataStore.SetParameterValue("VirtualLens2_Aperture", vl2Aperture);
+                }
+                if (VirtualLens2_FocalLength_textBox != null && float.TryParse(VirtualLens2_FocalLength_textBox.Text, out float vl2FocalLength))
+                {
+                    _oscDataStore.SetParameterValue("VirtualLens2_FocalLength", vl2FocalLength);
+                }
+                if (VirtualLens2_Exposure_textBox != null && float.TryParse(VirtualLens2_Exposure_textBox.Text, out float vl2Exposure))
+                {
+                    _oscDataStore.SetParameterValue("VirtualLens2_Exposure", vl2Exposure);
+                }
+
+                // Integral設定
+                if (Integral_Aperture_textBox != null && float.TryParse(Integral_Aperture_textBox.Text, out float intAperture))
+                {
+                    _oscDataStore.SetParameterValue("Integral_Aperture", intAperture);
+                }
+                if (Integral_FocalLength_textBox != null && float.TryParse(Integral_FocalLength_textBox.Text, out float intFocalLength))
+                {
+                    _oscDataStore.SetParameterValue("Integral_FocalLength", intFocalLength);
+                }
+                if (Integral_Exposure_textBox != null && float.TryParse(Integral_Exposure_textBox.Text, out float intExposure))
+                {
+                    _oscDataStore.SetParameterValue("Integral_Exposure", intExposure);
+                }
+                if (Integral_BokeShape_textBox != null && float.TryParse(Integral_BokeShape_textBox.Text, out float intBokeShape))
+                {
+                    _oscDataStore.SetParameterValue("Integral_BokeShape", intBokeShape);
+                }
+                if (Integral_ShutterSpeed_textBox != null && float.TryParse(Integral_ShutterSpeed_textBox.Text, out float intShutterSpeed))
+                {
+                    _oscDataStore.SetParameterValue("Integral_ShutterSpeed", intShutterSpeed);
+                }
+
+                Debug.WriteLine("UIからOscDataStoreを更新しました");
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"OscDataStore更新エラー: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// OSCカメラ初期化処理（2分待機後またはVRChat起動中の設定適用時に実行）
+        /// </summary>
+        private async Task ExecuteOscCameraInitialization()
+        {
+            try
+            {
+                if (_oscParameterSender == null)
+                {
+                    Console.WriteLine("[OSCエラー] OSCParameterSenderが初期化されていません");
+                    return;
+                }
+
+                Console.WriteLine("[OSC初期化] カメラパラメータ初期化を開始します");
+                await _oscParameterSender.InitializeCameraParameters();
+                Console.WriteLine("[OSC初期化] カメラパラメータ初期化が完了しました");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[OSCエラー] OSC初期化エラー: {ex.Message}");
+                Debug.WriteLine($"OSC初期化エラー: {ex.StackTrace}");
+            }
+        }
+
+        #endregion
+
+        private void OSCStatus_toolStripStatusLabel_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void startingState_toolStripStatusLabel_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void label4_Click_2(object sender, EventArgs e)
+        {
+
+        }
+
+        private void checkBox1_CheckedChanged(object sender, EventArgs e)
+        {
+
+        }
+
+        private void label4_Click_3(object sender, EventArgs e)
+        {
+
+        }
+
+        private void label5_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void VirtualLens2_groupBox_Enter(object sender, EventArgs e)
+        {
+
+        }
+
+        private void OSCStatus_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        /// <summary>
+        /// OSCメッセージ受信イベントハンドラ（開発モード用）
+        /// </summary>
+        private void OnOscMessageReceived(string address, object? value)
+        {
+            if (devMode_checkBox?.Checked == true)
+            {
+                if (InvokeRequired)
+                {
+                    Invoke((Action)(() =>
+                    {
+                        if (label5 != null)
+                        {
+                            label5.Text = $"Last OSC: {DateTime.Now:HH:mm:ss.fff} - {address}";
+                            label5.Visible = true;
+                        }
+                    }));
+                }
+                else
+                {
+                    if (label5 != null)
+                    {
+                        label5.Text = $"Last OSC: {DateTime.Now:HH:mm:ss.fff} - {address}";
+                        label5.Visible = true;
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// OSCログメッセージ受信イベントハンドラ（ログモード用）
+        /// 重くならないよう最大1000行までに制限
+        /// </summary>
+        private void OnOscLogMessageReceived(string logMessage)
+        {
+            if (OSCLog_checkBox?.Checked == true)
+            {
+                if (InvokeRequired)
+                {
+                    Invoke((Action)(() =>
+                    {
+                        if (OSCLog_richTextBox != null)
+                        {
+                            OSCLog_richTextBox.AppendText(logMessage + Environment.NewLine);
+
+                            // 行数制限（1000行を超えたら古い行を削除）
+                            if (OSCLog_richTextBox.Lines.Length > 1000)
+                            {
+                                var lines = OSCLog_richTextBox.Lines;
+                                var newLines = lines.Skip(200).ToArray(); // 上から200行削除
+                                OSCLog_richTextBox.Lines = newLines;
+                            }
+
+                            // 自動スクロール
+                            OSCLog_richTextBox.SelectionStart = OSCLog_richTextBox.Text.Length;
+                            OSCLog_richTextBox.ScrollToCaret();
+                        }
+                    }));
+                }
+            }
+        }
+
+        private void CameraSetting_groupBox_Enter(object sender, EventArgs e)
         {
 
         }

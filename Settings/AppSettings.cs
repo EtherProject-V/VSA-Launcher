@@ -14,6 +14,7 @@ namespace VSA_launcher
         public Compression Compression { get; set; } = new Compression();
         public Performance Performance { get; set; } = new Performance();
         public LauncherSettings LauncherSettings { get; set; } = new LauncherSettings();
+        public CameraSettings CameraSettings { get; set; } = new CameraSettings();
     }
 
     public class FolderStructureSettings
@@ -52,8 +53,14 @@ namespace VSA_launcher
     {
         public bool WatchingEnabled { get; set; } = true;
         public bool StartWithWindows { get; set; } = false;
-        public int IntegralOscPort { get; set; } = 9004;
-        public int VirtualLens2OscPort { get; set; } = 9002; // デフォルトポート
+        public OSCSettings OSCSettings { get; set; } = new OSCSettings();
+    }
+
+    public class OSCSettings
+    {
+        public bool Enabled { get; set; } = true;
+        public int ReceiverPort { get; set; } = 9001; // VRChatから受信するポート
+        public int SenderPort { get; set; } = 9000;   // VRChatへ送信するポート
     }
 
     // 拡張機能として使われていた古いクラスはVSA_launcher.Settings名前空間に移動
@@ -213,5 +220,28 @@ namespace VSA_launcher
                 _sequenceCounters.Clear();
             }
         }
+    }
+
+    public class CameraSettings
+    {
+        public bool Enabled { get; set; } = false;
+        public VirtualLens2Settings VirtualLens2 { get; set; } = new VirtualLens2Settings();
+        public IntegralSettings Integral { get; set; } = new IntegralSettings();
+    }
+
+    public class VirtualLens2Settings
+    {
+        public int Aperture { get; set; } = 0;     
+        public int FocalLength { get; set; } = 44; 
+        public int Exposure { get; set; } = 50;
+    }
+
+    public class IntegralSettings
+    {
+        public int Aperture { get; set; } = 50;
+        public int FocalLength { get; set; } = 50;
+        public int Exposure { get; set; } = 50;
+        public int ShutterSpeed { get; set; } = 50;
+        public int BokehShape { get; set; } = 50;
     }
 }

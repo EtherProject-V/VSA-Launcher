@@ -28,8 +28,6 @@ namespace VSA_launcher
         // VRChatログ解析
         private readonly VRChatLogParser _logParser;
         
-        // メタデータ処理用のキー
-        private const string PROCESSED_KEY = "VSACheck";
         
         // 統計情報
         public int DetectedFilesCount { get; private set; } = 0;
@@ -419,12 +417,6 @@ namespace VSA_launcher
                     return;
                 }
                 
-                // 処理済みファイルかチェック
-                if (IsProcessedFile(filePath))
-                {
-                    RaiseStatusChanged($"処理済みファイルをスキップ: {Path.GetFileName(filePath)}");
-                    return;
-                }
                 
                 // ファイル検出イベント発火
                 RaiseFileDetected(filePath);
@@ -472,9 +464,6 @@ namespace VSA_launcher
                     // メタデータの生成
                     var metadata = new Dictionary<string, string>
                     {
-                        // 処理済みマーカー
-                        { PROCESSED_KEY, "true" },
-                        
                         // ワールド情報
                         { "WorldName", _logParser.CurrentWorldName ?? "Unknown World" },
                         { "WorldID", _logParser.CurrentWorldId ?? "Unknown" },
@@ -549,12 +538,6 @@ namespace VSA_launcher
                 // メタデータ機能が有効かつPNGファイルの場合
                 if (_settings.Metadata.Enabled && IsPngFile(sourceFilePath))
                 {
-                    // 処理済みマーカーの追加（なければ）
-                    if (!customMetadata.ContainsKey(PROCESSED_KEY))
-                    {
-                        customMetadata[PROCESSED_KEY] = "true";
-                    }
-                    
                     // PngMetadataManagerを使用してメタデータを追加
                     bool success = PngMetadataManager.AddMetadataToPng(sourceFilePath, destinationPath, customMetadata);
                     
@@ -689,23 +672,6 @@ namespace VSA_launcher
             return Path.GetExtension(filePath).Equals(".png", StringComparison.OrdinalIgnoreCase);
         }
         
-        /// <summary>
-        /// ファイルが処理済み（VSACheckタグがある）かどうかを確認
-        /// </summary>
-        private bool IsProcessedFile(string filePath)
-        {
-            try
-            {
-                // PngMetadataManagerを使用
-                var metadata = PngMetadataManager.ReadMetadata(filePath);
-                return metadata.ContainsKey(PROCESSED_KEY) && metadata[PROCESSED_KEY] == "true";
-            }
-            catch
-            {
-                return false;
-            }
-        }
-
         /// <summary>
         /// ファイルのロック解除を待機（ファイルが完全に書き込まれるまで）
         /// </summary>
