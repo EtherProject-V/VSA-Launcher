@@ -1354,10 +1354,20 @@ namespace VSA_launcher
                 cameraSettomg_checkBox.CheckedChanged += CameraSettomg_CheckBox_CheckedChanged;
             }
 
-            // useCameraチェックボックスのイベントハンドラ設定（useCamera_groupBoxの有効/無効制御用）
-           
+            // useVirtuallens2およびuseIntegralチェックボックスのイベントハンドラ設定
+            if (useVirtuallens2_checkBox != null)
+                useVirtuallens2_checkBox.CheckedChanged += UseVirtuallens2_CheckBox_CheckedChanged;
+            if (useIntegral_checkBox != null)
+                useIntegral_checkBox.CheckedChanged += UseIntegral_CheckBox_CheckedChanged;
+
             // 設定からUIに値を読み込み
             LoadCameraSettingsToUI();
+
+            // チェックボックスの状態に応じてグループボックスを表示/非表示
+            if (useVirtuallens2_checkBox != null && VirtualLens2_groupBox != null)
+                VirtualLens2_groupBox.Visible = useVirtuallens2_checkBox.Checked;
+            if (useIntegral_checkBox != null && Integral_groupBox != null)
+                Integral_groupBox.Visible = useIntegral_checkBox.Checked;
 
             // 初期状態の設定
             UpdateCameraControlsState();
@@ -1386,6 +1396,38 @@ namespace VSA_launcher
         private void CameraMode_RadioButton_CheckedChanged(object? sender, EventArgs e)
         {
             // 何らかの追加処理が必要な場合はここに記述
+        }
+        
+        /// <summary>
+        /// useVirtuallens2_checkBoxの変更イベントハンドラ
+        /// </summary>
+        private void UseVirtuallens2_CheckBox_CheckedChanged(object? sender, EventArgs e)
+        {
+            bool enabled = useVirtuallens2_checkBox?.Checked ?? false;
+            // パラメータグループの表示/非表示
+            if (VirtualLens2_groupBox != null)
+                VirtualLens2_groupBox.Visible = enabled;
+            // OSCでカメラ有効化パラメータ送信
+            _oscParameterSender?.SendCameraEnableParameter(CameraType.VirtualLens2, enabled);
+            // データストア更新
+            if (_oscDataStore != null)
+                _oscDataStore.IsVirtualLens2Active = enabled;
+        }
+
+        /// <summary>
+        /// useIntegral_checkBoxの変更イベントハンドラ
+        /// </summary>
+        private void UseIntegral_CheckBox_CheckedChanged(object? sender, EventArgs e)
+        {
+            bool enabled = useIntegral_checkBox?.Checked ?? false;
+            // パラメータグループの表示/非表示
+            if (Integral_groupBox != null)
+                Integral_groupBox.Visible = enabled;
+            // OSCでカメラ有効化パラメータ送信
+            _oscParameterSender?.SendCameraEnableParameter(CameraType.Integral, enabled);
+            // データストア更新
+            if (_oscDataStore != null)
+                _oscDataStore.IsIntegralActive = enabled;
         }
 
         /// <summary>

@@ -639,7 +639,7 @@
             // useVirtuallens2_checkBox
             // 
             useVirtuallens2_checkBox.AutoSize = true;
-            useVirtuallens2_checkBox.Location = new Point(76, 21);
+            useVirtuallens2_checkBox.Location = new Point(4, 21);
             useVirtuallens2_checkBox.Name = "useVirtuallens2_checkBox";
             useVirtuallens2_checkBox.Size = new Size(90, 19);
             useVirtuallens2_checkBox.TabIndex = 38;
@@ -650,7 +650,7 @@
             // useIntegral_checkBox
             // 
             useIntegral_checkBox.AutoSize = true;
-            useIntegral_checkBox.Location = new Point(4, 21);
+            useIntegral_checkBox.Location = new Point(99, 21);
             useIntegral_checkBox.Name = "useIntegral_checkBox";
             useIntegral_checkBox.Size = new Size(66, 19);
             useIntegral_checkBox.TabIndex = 37;
@@ -670,7 +670,7 @@
             Integral_groupBox.Controls.Add(Integral_Aperture_label);
             Integral_groupBox.Controls.Add(Integral_FocalLength_textBox);
             Integral_groupBox.Controls.Add(Integral_FocalLength_label);
-            Integral_groupBox.Location = new Point(0, 143);
+            Integral_groupBox.Location = new Point(3, 129);
             Integral_groupBox.Name = "Integral_groupBox";
             Integral_groupBox.Size = new Size(374, 78);
             Integral_groupBox.TabIndex = 33;
@@ -775,7 +775,7 @@
             VirtualLens2_groupBox.Controls.Add(VirtualLens2_FocalLength_label);
             VirtualLens2_groupBox.Controls.Add(VirtualLens2_Aperture_textBox);
             VirtualLens2_groupBox.Controls.Add(VirtualLens2_Aperture_label);
-            VirtualLens2_groupBox.Location = new Point(-1, 88);
+            VirtualLens2_groupBox.Location = new Point(2, 74);
             VirtualLens2_groupBox.Name = "VirtualLens2_groupBox";
             VirtualLens2_groupBox.Size = new Size(377, 49);
             VirtualLens2_groupBox.TabIndex = 23;
