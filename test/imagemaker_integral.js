@@ -19,7 +19,7 @@ function createChunk(type, data) {
 
 function createTextChunk(keyword, text) {
     let textToStore = String(text); // Ensure text is a string
-    const requiresEncoding = /[\u0080-\uFFFF]/.test(textToStore) || ['WorldName', 'User', 'Usernames', 'Description', 'Integral_BokehShape'].includes(keyword);
+    const requiresEncoding = /[\u0080-\uFFFF]/.test(textToStore) || ['WorldName', 'Capture-User', 'instans-Usernames', 'Description', 'Integral_BokehShape'].includes(keyword);
 
     if (requiresEncoding) {
         const base64Text = Buffer.from(textToStore, 'utf8').toString('base64');
@@ -68,9 +68,9 @@ function createImageWithMetadata() {
         "VSACheck": "true",
         "WorldName": "インテグラル・テストワールド",
         "WorldID": "wrld_integral_test_world_id",
-        "User": "Integral-User",
+        "Capture-User": "Integral-User", // example.jsonの形式に合わせて変更
         "CaptureTime": new Date().toISOString(),
-        "Usernames": "Integral-Friend1, Integral-Friend2",
+        "instans-Usernames": "Integral-Friend1, Integral-Friend2", // example.jsonの形式に合わせて変更
         "IsIntegral": "true",
         "Integral_Aperture": "1.4",
         "Integral_FocalLength": "85",

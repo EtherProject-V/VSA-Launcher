@@ -52,11 +52,11 @@ namespace VSA_launcher
                 {
                     { "WorldName", _logParser.CurrentWorldName ?? "Unknown" },
                     { "WorldID", _logParser.CurrentWorldId ?? "Unknown" },
-                    { "User", username },  // 'Username'を'User'に変更
-                    { "CaptureTime", DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss") }
+                    { "Capture-User", username },  // example.jsonの形式に合わせて変更
+                    { "CaptureTime", DateTime.Now.ToString("yyyy-MM-ddTHH:mm:ss.fffK") } // ISO 8601形式に変更（タイムゾーン込み）
                 };
 
-                metadata["Usernames"] = _logParser.GetFriendsString();
+                metadata["instans-Usernames"] = _logParser.GetFriendsString(); // example.jsonの形式に合わせて変更
 
                 // OSC関連のメタデータを追加
                 metadata["VirtualLens2_Aperture"] = _oscDataStore.VirtualLens2_Aperture.ToString();

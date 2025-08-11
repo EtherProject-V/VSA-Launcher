@@ -1,10 +1,9 @@
 これはメタデータに格納されるjsonの例です。　
 {
   "WorldName": "My Favorite World",
-  "WorldID": "wrld_xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
-  "User": "MyUserName",
-  "CaptureTime": "2024-07-26 10:30:00",
-  "Usernames": "Friend1, Friend2, Friend3",
+  "Capture-User": "MyUserName",
+  "CaptureTime": "2024-07-26T10:30:00+09:00",
+  "instans-Usernames": "Friend1, Friend2, Friend3",
   "VirtualLens2_Aperture": "0.0",
   "VirtualLens2_FocalLength": "0.0",
   "VirtualLens2_Exposure": "0.0",
@@ -17,5 +16,3 @@
   "IsVirtualLens2": "false",
   "NormalCamera": "true"
 }
-
-

@@ -19,7 +19,7 @@ function createChunk(type, data) {
 
 function createTextChunk(keyword, text) {
     let textToStore = String(text); // Ensure text is a string
-    const requiresEncoding = /[\u0080-\uFFFF]/.test(textToStore) || ['WorldName', 'User', 'Usernames', 'Description', 'Integral_BokehShape'].includes(keyword);
+    const requiresEncoding = /[\u0080-\uFFFF]/.test(textToStore) || ['WorldName', 'Capture-User', 'instans-Usernames', 'Description', 'Integral_BokehShape'].includes(keyword);
 
     if (requiresEncoding) {
         const base64Text = Buffer.from(textToStore, 'utf8').toString('base64');
@@ -68,9 +68,9 @@ function createImageWithMetadata() {
         "VSACheck": "true",
         "WorldName": "バーチャルレンズ・テストワールド",
         "WorldID": "wrld_virtuallens_test_world_id",
-        "User": "VirtualLens-User",
+        "Capture-User": "VirtualLens-User", // example.jsonの形式に合わせて変更
         "CaptureTime": new Date().toISOString(),
-        "Usernames": "VL-Friend1, VL-Friend2",
+        "instans-Usernames": "VL-Friend1, VL-Friend2", // example.jsonの形式に合わせて変更
         "IsIntegral": "false",
         "Integral_Aperture": "0.0",
         "Integral_FocalLength": "0",

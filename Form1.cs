@@ -38,6 +38,9 @@ namespace VSA_launcher
         private CancellationTokenSource _cancellationTokenSource = null!;
         private OSCQueryService? _oscQueryService;
         private OSCParameterSender? _oscParameterSender; // OSC送信専用クラス
+        private OscManager? _oscManager; // OSCマネージャーの参照を保持
+        private bool _oscSenderStarted = false; // OSC送信機能が開始済みかのフラグ
+        private bool _oscListenerStarted = false; // OSC受信機能が開始済みかのフラグ
 
         // VRChat監視用
         private System.Windows.Forms.Timer _vrchatMonitorTimer = null!;
@@ -80,25 +83,21 @@ namespace VSA_launcher
                     .AdvertiseOSCQuery()
                     .Build();
 
-                // OSC設定に基づいてVRChatからの受信用リスナーを開始
+                // OSC設定に基づいてVRChatからの受信用リスナーを初期化（起動は後で）
                 _vrchatListener = new OSCServer.VRChatListener(_oscDataStore);
-                _vrchatListener.Start();
 
                 // OSC受信イベントの設定
                 _vrchatListener.MessageReceived += OnOscMessageReceived;
                 _vrchatListener.LogMessageReceived += OnOscLogMessageReceived;
 
-                Console.WriteLine($"[OSC初期化] VRChat OSC Listener started - 受信ポート: {_settings.LauncherSettings.OSCSettings.ReceiverPort}");
-                System.Diagnostics.Debug.WriteLine("VRChat OSC Listener started on port 9001");
+                Console.WriteLine("[OSC初期化] VRChat OSC Listener initialized (起動待機中)");
+                System.Diagnostics.Debug.WriteLine("VRChat OSC Listener initialized (waiting for VRChat)");
 
-                // OSCマネージャーを初期化
-                var oscManager = new OSCServer.OscManager(_cancellationTokenSource.Token, _oscDataStore, _oscQueryService);
-                oscManager.Start();
-                oscManager.StartParameterMonitoring();
-                Console.WriteLine($"[OSC初期化] OSC Manager started - 送信先: 127.0.0.1:{_settings.LauncherSettings.OSCSettings.SenderPort}");
+                _oscManager = new OSCServer.OscManager(_cancellationTokenSource.Token, _oscDataStore, _oscQueryService);
+                Console.WriteLine("[OSC初期化] OSC Manager initialized (送信待機中)");
 
                 // OSCParameterSenderを初期化
-                _oscParameterSender = new OSCServer.OSCParameterSender(oscManager, _oscDataStore, _settings);
+                _oscParameterSender = new OSCServer.OSCParameterSender(_oscManager, _oscDataStore, _settings);
                 Console.WriteLine("[OSC初期化] OSCParameterSender initialized");
 
                 _systemTrayIcon = new SystemTrayIcon(this, notifyIcon, contextMenuStrip1);
@@ -744,6 +743,7 @@ namespace VSA_launcher
                 _systemTrayIcon?.Dispose();
                 _cancellationTokenSource?.Cancel(); // OSCサーバーに停止を通知
                 _vrchatListener?.Dispose(); // VRChatリスナーを
+                _oscManager?.Dispose(); // OSCマネージャーのDispose追加
                 _cancellationTokenSource?.Dispose();
                 _oscQueryService?.Dispose(); // 追加
                 _oscParameterSender = null; // OSCParameterSenderをnull化
@@ -859,9 +859,13 @@ namespace VSA_launcher
                 worldName_richTextBox.Text = worldName;
             }
 
-            if (metadata.TryGetValue("Usernames", out string? usernames) && usernames != null) // 'Friends'を'Usernames'に変更
+            if (metadata.TryGetValue("instans-Usernames", out string? usernames) && usernames != null) // example.jsonの形式に合わせて変更
             {
                 worldFriends_richTextBox.Text = usernames;
+            }
+            else if (metadata.TryGetValue("Usernames", out string? oldUsernames) && oldUsernames != null) // 互換性のために残しておく
+            {
+                worldFriends_richTextBox.Text = oldUsernames;
             }
 
             if (metadata.TryGetValue("CaptureTime", out string? captureTime) && captureTime != null)
@@ -869,9 +873,13 @@ namespace VSA_launcher
                 photoTime_textBox.Text = captureTime;
             }
 
-            if (metadata.TryGetValue("User", out string? user) && user != null) // 'Username'を'User'に変更
+            if (metadata.TryGetValue("Capture-User", out string? user) && user != null) // example.jsonの形式に合わせて変更
             {
                 photographName_textBox.Text = user;
+            }
+            else if (metadata.TryGetValue("User", out string? oldUser) && oldUser != null) // 互換性のために残しておく
+            {
+                photographName_textBox.Text = oldUser;
             }
 
             // カメラの使用状況を表示
@@ -948,9 +956,9 @@ namespace VSA_launcher
                     { "VSACheck", "true" },
                     { "WorldName", "テストワールド名" },
                     { "WorldID", "wrld_test-world-id-123" },
-                    { "User", "テストユーザー名" }, // 'Username'を'User'に変更
-                    { "CaptureTime", DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss") },
-                    { "Usernames", "ユーザー1, ユーザー2, ユーザー3, 日本語名前" },
+                    { "Capture-User", "テストユーザー名" }, // example.jsonの形式に合わせて変更
+                    { "CaptureTime", DateTime.Now.ToString("yyyy-MM-ddTHH:mm:ss.fffK") }, // ISO 8601形式に変更
+                    { "instans-Usernames", "ユーザー1, ユーザー2, ユーザー3, 日本語名前" }, // example.jsonの形式に合わせて変更
                     { "TestKey", "これはテストです" }
                 };
 
@@ -1214,6 +1222,17 @@ namespace VSA_launcher
             {
                 _isVRChatRunning = currentVRChatStatus;
 
+                // VRChat起動時にOSC機能を開始
+                if (_isVRChatRunning && (!_oscListenerStarted || !_oscSenderStarted))
+                {
+                    StartOscServices();
+                }
+                // VRChat停止時にOSC機能を停止
+                else if (!_isVRChatRunning && (_oscListenerStarted || _oscSenderStarted))
+                {
+                    StopOscServices();
+                }
+
                 // UIスレッドでの実行を保証
                 if (InvokeRequired)
                 {
@@ -1277,6 +1296,71 @@ namespace VSA_launcher
         }
 
         /// <summary>
+        /// OSC機能（受信・送信）を開始
+        /// </summary>
+        private void StartOscServices()
+        {
+            try
+            {
+                // OSC受信機能を開始
+                if (!_oscListenerStarted && _vrchatListener != null)
+                {
+                    _vrchatListener.Start();
+                    _oscListenerStarted = true;
+                    Console.WriteLine("[OSC初期化] VRChat OSC Listener started (port 9001)");
+                }
+
+                // OSC送信機能を開始
+                if (!_oscSenderStarted && _oscManager != null)
+                {
+                    _oscManager.Start();
+                    _oscManager.StartParameterMonitoring();
+                    _oscSenderStarted = true;
+                    Console.WriteLine("[OSC初期化] OSC Manager started (port 9000)");
+                }
+
+                UpdateStatusInfo("OSC機能開始", "VRChatとの通信を開始しました");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[OSCエラー] OSC機能開始エラー: {ex.Message}");
+                UpdateStatusInfo("OSC開始エラー", $"エラー: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// OSC機能（受信・送信）を停止
+        /// </summary>
+        private void StopOscServices()
+        {
+            try
+            {
+                // OSC受信機能を停止
+                if (_oscListenerStarted && _vrchatListener != null)
+                {
+                    _vrchatListener.Stop();
+                    _oscListenerStarted = false;
+                    Console.WriteLine("[OSC停止] VRChat OSC Listener stopped");
+                }
+
+                // OSC送信機能を停止
+                if (_oscSenderStarted && _oscManager != null)
+                {
+                    _oscManager.StopParameterMonitoring();
+                    _oscSenderStarted = false;
+                    Console.WriteLine("[OSC停止] OSC Manager stopped");
+                }
+
+                UpdateStatusInfo("OSC機能停止", "VRChatとの通信を停止しました");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[OSCエラー] OSC機能停止エラー: {ex.Message}");
+                UpdateStatusInfo("OSC停止エラー", $"エラー: {ex.Message}");
+            }
+        }
+
+        /// <summary>
         /// アプリ起動時のVRChat状態チェック（既に起動している場合の処理）
         /// </summary>
         private void CheckInitialVRChatStatus()
@@ -1289,6 +1373,9 @@ namespace VSA_launcher
                 if (_isVRChatRunning)
                 {
                     Console.WriteLine("[初期化] VRChat.exeが既に起動しています");
+                    
+                    // OSC機能を開始
+                    StartOscServices();
                     
                     // UIの更新
                     UpdateVRChatStatusLabel();

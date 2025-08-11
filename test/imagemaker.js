@@ -77,9 +77,9 @@ function createImageWithMetadata() {
         "VSACheck": "true",
         "WorldName": "world名",
         "WorldID": "wrld_12345678-abcd-effe-dcba-876543210fed",
-        "User": "ユーザー名",
+        "Capture-User": "ユーザー名", // example.jsonの形式に合わせて変更
         "CaptureTime": new Date().toISOString(),
-        "Usernames": "Friend1, Friend2, 友達3", // Mixed usernames
+        "instans-Usernames": "Friend1, Friend2, 友達3", // example.jsonの形式に合わせて変更
         "VirtualLens2_Aperture": "2.8",
         "VirtualLens2_FocalLength": "50",
         "VirtualLens2_Exposure": "0.0",

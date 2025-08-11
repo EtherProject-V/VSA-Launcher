@@ -510,13 +510,13 @@ namespace VSA_launcher
                 { "WorldID", CurrentWorldId },
                 
                 // フレンド情報（.区切り）
-                { "Usernames", GetFriendsString() },
+                { "instans-Usernames", GetFriendsString() },
                 
                 // 撮影者情報
-                { "User", Username }, // 'Username'を'User'に変更
+                { "Capture-User", Username },
                 
                 // 撮影日時
-                { "CaptureTime", DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss") }
+                { "CaptureTime", DateTime.Now.ToString("yyyy-MM-ddTHH:mm:ss.fffK") }
             };
         }
 

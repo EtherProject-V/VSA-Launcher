@@ -72,7 +72,7 @@ namespace VSA_launcher
         /// <summary>
         /// メタデータをテキストファイルにエクスポート
         /// </summary>
-        public static string ExportMetadataToTextFile(string pngFilePath, string? exportPath = null)
+    public static string? ExportMetadataToTextFile(string pngFilePath, string? exportPath = null)
         {
             return PngMetadataManager.ExportMetadataToTextFile(pngFilePath, exportPath);
         }
@@ -118,8 +118,7 @@ namespace VSA_launcher
             
             try
             {
-                // System.Text.Jsonを使う場合
-                return JsonSerializer.Deserialize<Dictionary<string, string>>(json);
+                return JsonSerializer.Deserialize<Dictionary<string, string>>(json) ?? new Dictionary<string, string>();
             }
             catch
             {

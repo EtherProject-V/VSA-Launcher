@@ -469,13 +469,13 @@ namespace VSA_launcher
                         { "WorldID", _logParser.CurrentWorldId ?? "Unknown" },
                         
                         // フレンド情報（.区切り）
-                        { "Usernames", string.Join(".", _logParser.CurrentFriends) },
+                        { "instans-Usernames", string.Join(".", _logParser.CurrentFriends) },
                         
                         // 撮影者情報
-                        { "User", _logParser.Username ?? "Unknown User" },
+                        { "Capture-User", _logParser.Username ?? "Unknown User" },
                         
                         // 撮影日時
-                        { "CaptureTime", DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss") }
+                        { "CaptureTime", DateTime.Now.ToString("yyyy-MM-ddTHH:mm:ss.fffK") }
                     };
                     
                     // メタデータ内容の確認（デバッグ用）

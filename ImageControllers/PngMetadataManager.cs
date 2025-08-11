@@ -61,72 +61,72 @@ namespace VSA_launcher
                 
                 // 2. 重要なメタデータは個別のチャンクにも保存（冗長化）
                 // 特に重要なフィールドはUTF-8でエンコードされることを確実にするため明示的に処理
-                if (metadata.TryGetValue("WorldName", out string worldName))
+                if (metadata.TryGetValue("WorldName", out string? worldName) && !string.IsNullOrEmpty(worldName))
                 {
                     // 確実にBase64エンコードされるよう明示的に処理
                     textChunks.Add(CreateTextChunkData("WorldName", worldName));
                 }
 
-                if (metadata.TryGetValue("WorldID", out string worldId))
+                if (metadata.TryGetValue("WorldID", out string? worldId) && !string.IsNullOrEmpty(worldId))
                 {
                     textChunks.Add(CreateTextChunkData("WorldID", worldId));
                 }
 
-                if (metadata.TryGetValue("User", out string user)) // 'Username'を'User'に変更
+                if (metadata.TryGetValue("Capture-User", out string? user) && !string.IsNullOrEmpty(user)) // example.jsonの形式に合わせて変更
                 {
                     // 確実にBase64エンコードされるよう明示的に処理
-                    textChunks.Add(CreateTextChunkData("User", user));
+                    textChunks.Add(CreateTextChunkData("Capture-User", user));
                 }
 
-                if (metadata.TryGetValue("CaptureTime", out string captureTime))
+                if (metadata.TryGetValue("CaptureTime", out string? captureTime) && !string.IsNullOrEmpty(captureTime))
                 {
                     textChunks.Add(CreateTextChunkData("CaptureTime", captureTime));
                 }
 
-                if (metadata.TryGetValue("Usernames", out string usernames)) // 'Friends'を'Usernames'に変更
+                if (metadata.TryGetValue("instans-Usernames", out string? usernames) && !string.IsNullOrEmpty(usernames)) 
                 {
                     // 確実にBase64エンコードされるよう明示的に処理
-                    textChunks.Add(CreateTextChunkData("Usernames", usernames));
+                    textChunks.Add(CreateTextChunkData("instans-Usernames", usernames));
                 }
 
-                // 新しいOSC関連のメタデータを個別のチャンクにも保存
-                if (metadata.TryGetValue("VirtualLens2_Aperture", out string vl2Aperture))
+                // OSC関連のメタデータを個別のチャンクにも保存
+                if (metadata.TryGetValue("VirtualLens2_Aperture", out string? vl2Aperture) && !string.IsNullOrEmpty(vl2Aperture))
                 {
                     textChunks.Add(CreateTextChunkData("VirtualLens2_Aperture", vl2Aperture));
                 }
-                if (metadata.TryGetValue("VirtualLens2_FocalLength", out string vl2FocalLength))
+                if (metadata.TryGetValue("VirtualLens2_FocalLength", out string? vl2FocalLength) && !string.IsNullOrEmpty(vl2FocalLength))
                 {
                     textChunks.Add(CreateTextChunkData("VirtualLens2_FocalLength", vl2FocalLength));
                 }
-                if (metadata.TryGetValue("VirtualLens2_Exposure", out string vl2Exposure))
+                if (metadata.TryGetValue("VirtualLens2_Exposure", out string? vl2Exposure) && !string.IsNullOrEmpty(vl2Exposure))
                 {
                     textChunks.Add(CreateTextChunkData("VirtualLens2_Exposure", vl2Exposure));
                 }
-                if (metadata.TryGetValue("Integral_Aperture", out string intAperture))
+                if (metadata.TryGetValue("Integral_Aperture", out string? intAperture) && !string.IsNullOrEmpty(intAperture))
                 {
                     textChunks.Add(CreateTextChunkData("Integral_Aperture", intAperture));
                 }
-                if (metadata.TryGetValue("Integral_FocalLength", out string intFocalLength))
+                if (metadata.TryGetValue("Integral_FocalLength", out string? intFocalLength) && !string.IsNullOrEmpty(intFocalLength))
                 {
                     textChunks.Add(CreateTextChunkData("Integral_FocalLength", intFocalLength));
                 }
-                if (metadata.TryGetValue("Integral_Exposure", out string intExposure))
+                if (metadata.TryGetValue("Integral_Exposure", out string? intExposure) && !string.IsNullOrEmpty(intExposure))
                 {
                     textChunks.Add(CreateTextChunkData("Integral_Exposure", intExposure));
                 }
-                if (metadata.TryGetValue("Integral_ShutterSpeed", out string intShutterSpeed))
+                if (metadata.TryGetValue("Integral_ShutterSpeed", out string? intShutterSpeed) && !string.IsNullOrEmpty(intShutterSpeed))
                 {
                     textChunks.Add(CreateTextChunkData("Integral_ShutterSpeed", intShutterSpeed));
                 }
-                if (metadata.TryGetValue("Integral_BokehShape", out string intBokehShape))
+                if (metadata.TryGetValue("Integral_BokehShape", out string? intBokehShape) && !string.IsNullOrEmpty(intBokehShape))
                 {
                     textChunks.Add(CreateTextChunkData("Integral_BokehShape", intBokehShape));
                 }
-                if (metadata.TryGetValue("IsIntegral", out string isIntegral))
+                if (metadata.TryGetValue("IsIntegral", out string? isIntegral) && !string.IsNullOrEmpty(isIntegral))
                 {
                     textChunks.Add(CreateTextChunkData("IsIntegral", isIntegral));
                 }
-                if (metadata.TryGetValue("IsVirtualLens2", out string isVirtualLens2))
+                if (metadata.TryGetValue("IsVirtualLens2", out string? isVirtualLens2) && !string.IsNullOrEmpty(isVirtualLens2))
                 {
                     textChunks.Add(CreateTextChunkData("IsVirtualLens2", isVirtualLens2));
                 }
@@ -139,8 +139,10 @@ namespace VSA_launcher
                     description.AppendLine($"World: {metadata["WorldName"]}");
                 if (metadata.ContainsKey("WorldID"))
                     description.AppendLine($"ID: {metadata["WorldID"]}");
-                if (metadata.ContainsKey("Username"))
-                    description.AppendLine($"User: {metadata["Username"]}"); // ↑このメタデータキーは互換性のために残しておく
+                if (metadata.ContainsKey("Capture-User"))
+                    description.AppendLine($"User: {metadata["Capture-User"]}");
+                else if (metadata.ContainsKey("Username"))
+                    description.AppendLine($"User: {metadata["Username"]}"); // 互換性のために残しておく
                 if (metadata.ContainsKey("CaptureTime"))
                     description.AppendLine($"Time: {metadata["CaptureTime"]}");
                 
@@ -190,8 +192,8 @@ namespace VSA_launcher
             
             // 下記の重要フィールドや非ASCII文字を含む場合は必ずBase64エンコード
             bool requiresEncoding = keyword == "WorldName" || 
-                                    keyword == "User" || // 'Username'を'User'に変更
-                                    keyword == "Usernames" ||
+                                    keyword == "Capture-User" ||
+                                    keyword == "instans-Usernames" ||
                                     keyword == "Description" ||
                                     ContainsNonAscii(text);
             
@@ -264,12 +266,12 @@ namespace VSA_launcher
         }
 
         // Base64でエンコードされたデータかどうかを判断してデコードするメソッドを修正
-        private static string DecodeTextValue(string text)
+    private static string DecodeTextValue(string? text)
         {
             try
             {
                 // Base64エンコードされたデータかチェック
-                if (text != null && text.StartsWith("BASE64:"))
+        if (text != null && text.StartsWith("BASE64:"))
                 {
                     string base64Data = text.Substring(7); // "BASE64:" を除去
                     
@@ -282,7 +284,7 @@ namespace VSA_launcher
                     {
                         // デコードエラーをログ出力
                         System.Diagnostics.Debug.WriteLine($"Base64デコードエラー: {ex.Message}");
-                        return text; // デコードに失敗した場合は元の値を返す
+            return text ?? string.Empty; // デコードに失敗した場合は元の値を返す
                     }
                 }
             }
@@ -291,7 +293,7 @@ namespace VSA_launcher
                 System.Diagnostics.Debug.WriteLine($"テキスト処理エラー: {ex.Message}");
             }
             
-            return text;
+        return text ?? string.Empty;
         }
         
         /// <summary>
@@ -464,10 +466,10 @@ namespace VSA_launcher
                         { PROCESSED_KEY, "true" },
                         { "WorldName", logParser.CurrentWorldName ?? "Unknown" },
                         { "WorldID", logParser.CurrentWorldId ?? "Unknown" },
-                        // 撮影者情報を明示的に追加
-                        { "User", logParser.Username ?? "Unknown User" }, // 'Username'を'User'に変更
-                        { "CaptureTime", DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss") },
-                        { "Usernames", logParser.GetFriendsString() } // 'Friends'を'Usernames'に変更
+                        // 撮影情報
+                        { "Capture-User", logParser.Username ?? "Unknown User" },
+                        { "CaptureTime", DateTime.Now.ToString("yyyy-MM-ddTHH:mm:ss.fffK") },
+                        { "instans-Usernames", logParser.GetFriendsString() }
                     };
                     
                     // 追加メタデータがあれば合併
@@ -502,7 +504,7 @@ namespace VSA_launcher
         /// <summary>
         /// メタデータをテキストファイルにエクスポート
         /// </summary>
-        public static string ExportMetadataToTextFile(string pngFilePath, string? exportPath = null)
+    public static string? ExportMetadataToTextFile(string pngFilePath, string? exportPath = null)
         {
             var metadata = ReadMetadataFromPng(pngFilePath);
             if (metadata.Count == 0)
