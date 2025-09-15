@@ -103,11 +103,14 @@
             LICENSEOpenFolder_button = new Button();
             label2 = new Label();
             LICENSE_label = new Label();
-            OSCStatus = new TabPage();
+            dev_OSCStatus = new TabPage();
             OSCLog_richTextBox = new RichTextBox();
             label5 = new Label();
             OSCLog_checkBox = new CheckBox();
+            dev_MetadataStatus = new TabPage();
             toolTip1 = new ToolTip(components);
+            dev_Metadata_richTextBox = new RichTextBox();
+            dev_Metadata_label = new Label();
             contextMenuStrip1.SuspendLayout();
             statusStrip1.SuspendLayout();
             fileSubdivision_Group.SuspendLayout();
@@ -122,7 +125,8 @@
             Integral_groupBox.SuspendLayout();
             VirtualLens2_groupBox.SuspendLayout();
             LICENSE.SuspendLayout();
-            OSCStatus.SuspendLayout();
+            dev_OSCStatus.SuspendLayout();
+            dev_MetadataStatus.SuspendLayout();
             SuspendLayout();
             // 
             // notifyIcon
@@ -392,7 +396,8 @@
             tabControl.Controls.Add(metaData);
             tabControl.Controls.Add(CameraSettings);
             tabControl.Controls.Add(LICENSE);
-            tabControl.Controls.Add(OSCStatus);
+            tabControl.Controls.Add(dev_OSCStatus);
+            tabControl.Controls.Add(dev_MetadataStatus);
             tabControl.Location = new Point(0, 0);
             tabControl.Name = "tabControl";
             tabControl.SelectedIndex = 0;
@@ -934,18 +939,18 @@
             LICENSE_label.TabIndex = 0;
             LICENSE_label.Text = "LICENSE";
             // 
-            // OSCStatus
+            // dev_OSCStatus
             // 
-            OSCStatus.Controls.Add(OSCLog_richTextBox);
-            OSCStatus.Controls.Add(label5);
-            OSCStatus.Controls.Add(OSCLog_checkBox);
-            OSCStatus.Location = new Point(4, 24);
-            OSCStatus.Name = "OSCStatus";
-            OSCStatus.Size = new Size(380, 329);
-            OSCStatus.TabIndex = 4;
-            OSCStatus.Text = "【開発】OSC";
-            OSCStatus.UseVisualStyleBackColor = true;
-            OSCStatus.Click += OSCStatus_Click;
+            dev_OSCStatus.Controls.Add(OSCLog_richTextBox);
+            dev_OSCStatus.Controls.Add(label5);
+            dev_OSCStatus.Controls.Add(OSCLog_checkBox);
+            dev_OSCStatus.Location = new Point(4, 24);
+            dev_OSCStatus.Name = "dev_OSCStatus";
+            dev_OSCStatus.Size = new Size(380, 329);
+            dev_OSCStatus.TabIndex = 4;
+            dev_OSCStatus.Text = "【開発】OSC";
+            dev_OSCStatus.UseVisualStyleBackColor = true;
+            dev_OSCStatus.Click += OSCStatus_Click;
             // 
             // OSCLog_richTextBox
             // 
@@ -974,6 +979,35 @@
             OSCLog_checkBox.TabIndex = 7;
             OSCLog_checkBox.Text = "OSCの全項目を見る";
             OSCLog_checkBox.UseVisualStyleBackColor = true;
+            // 
+            // dev_MetadataStatus
+            // 
+            dev_MetadataStatus.Controls.Add(dev_Metadata_label);
+            dev_MetadataStatus.Controls.Add(dev_Metadata_richTextBox);
+            dev_MetadataStatus.Location = new Point(4, 24);
+            dev_MetadataStatus.Name = "dev_MetadataStatus";
+            dev_MetadataStatus.Size = new Size(380, 329);
+            dev_MetadataStatus.TabIndex = 5;
+            dev_MetadataStatus.Text = "【開発】メタデータ";
+            dev_MetadataStatus.UseVisualStyleBackColor = true;
+            // 
+            // dev_Metadata_richTextBox
+            // 
+            dev_Metadata_richTextBox.Location = new Point(8, 31);
+            dev_Metadata_richTextBox.Name = "dev_Metadata_richTextBox";
+            dev_Metadata_richTextBox.Size = new Size(360, 239);
+            dev_Metadata_richTextBox.TabIndex = 0;
+            dev_Metadata_richTextBox.Text = "";
+            // 
+            // dev_Metadata_label
+            // 
+            dev_Metadata_label.AutoSize = true;
+            dev_Metadata_label.Font = new Font("Yu Gothic UI", 12F, FontStyle.Bold, GraphicsUnit.Point, 128);
+            dev_Metadata_label.Location = new Point(6, 7);
+            dev_Metadata_label.Name = "dev_Metadata_label";
+            dev_Metadata_label.Size = new Size(115, 21);
+            dev_Metadata_label.TabIndex = 1;
+            dev_Metadata_label.Text = "現在のメタデータ";
             // 
             // VSA_launcher
             // 
@@ -1008,8 +1042,10 @@
             VirtualLens2_groupBox.PerformLayout();
             LICENSE.ResumeLayout(false);
             LICENSE.PerformLayout();
-            OSCStatus.ResumeLayout(false);
-            OSCStatus.PerformLayout();
+            dev_OSCStatus.ResumeLayout(false);
+            dev_OSCStatus.PerformLayout();
+            dev_MetadataStatus.ResumeLayout(false);
+            dev_MetadataStatus.PerformLayout();
             ResumeLayout(false);
             PerformLayout();
         }
@@ -1100,7 +1136,7 @@
         private ToolTip toolTip1;
         private Label devMode_label;
         private CheckBox devMode_checkBox;
-        private TabPage OSCStatus;
+    private TabPage dev_OSCStatus;
         private Label label5;
         private CheckBox OSCLog_checkBox;
         private RichTextBox OSCLog_richTextBox;
@@ -1108,5 +1144,8 @@
         private CheckBox useVirtuallens2_checkBox;
         private CheckBox cameraSettomg_checkBox;
         private GroupBox useCamera_groupBox;
+    private TabPage dev_MetadataStatus;
+        private Label dev_Metadata_label;
+        private RichTextBox dev_Metadata_richTextBox;
     }
 }

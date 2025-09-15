@@ -45,18 +45,18 @@ namespace VSA_launcher
                 _logParser.ParseLatestLog();
 
                 // ユーザー名（撮影者）の情報を確保
-                string username = "Unknown User";
+                string username = _logParser?.Username ?? "Unknown User";
 
                 // メタデータの作成
                 var metadata = new Dictionary<string, string>
                 {
-                    { "WorldName", _logParser.CurrentWorldName ?? "Unknown" },
-                    { "WorldID", _logParser.CurrentWorldId ?? "Unknown" },
+                    { "WorldName", _logParser?.CurrentWorldName ?? "Unknown" },
+                    { "WorldID", _logParser?.CurrentWorldId ?? "Unknown" },
                     { "Capture-User", username },  // example.jsonの形式に合わせて変更
                     { "CaptureTime", DateTime.Now.ToString("yyyy-MM-ddTHH:mm:ss.fffK") } // ISO 8601形式に変更（タイムゾーン込み）
                 };
 
-                metadata["instans-Usernames"] = _logParser.GetFriendsString(); // example.jsonの形式に合わせて変更
+                metadata["instans-Usernames"] = _logParser?.GetFriendsString() ?? string.Empty; // example.jsonの形式に合わせて変更
 
                 // OSC関連のメタデータを追加
                 metadata["VirtualLens2_Aperture"] = _oscDataStore.VirtualLens2_Aperture.ToString();

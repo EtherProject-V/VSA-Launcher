@@ -18,6 +18,7 @@ namespace VSA_launcher.VRC_Game
         private readonly VRChatLogParser _logParser;
         private readonly OSCParameterSender _oscParameterSender;
         private readonly Action<string, string> _updateStatusAction;
+        private readonly Action _startOscServicesAction; // 追加: サーバー起動コールバック
 
         private System.Threading.Timer? _processMonitorTimer;
         private System.Threading.Timer? _roomJoinCheckTimer;
@@ -30,11 +31,13 @@ namespace VSA_launcher.VRC_Game
         public VRChatInitializationManager(
             VRChatLogParser logParser, 
             OSCParameterSender oscParameterSender,
-            Action<string, string> updateStatusAction)
+            Action<string, string> updateStatusAction,
+            Action startOscServicesAction)
         {
             _logParser = logParser ?? throw new ArgumentNullException(nameof(logParser));
             _oscParameterSender = oscParameterSender ?? throw new ArgumentNullException(nameof(oscParameterSender));
             _updateStatusAction = updateStatusAction ?? throw new ArgumentNullException(nameof(updateStatusAction));
+            _startOscServicesAction = startOscServicesAction ?? throw new ArgumentNullException(nameof(startOscServicesAction));
             
             _cancellationTokenSource = new CancellationTokenSource();
         }
@@ -97,9 +100,24 @@ namespace VSA_launcher.VRC_Game
                     
                     _updateStatusAction("既存セッション検知", "VRChat起動済み - 初期化を実行中...");
                     
-                    // OSC初期化を実行してセッション監視に移行
+                    // 10秒待機後にOSCサーバーを起動し、その後カメラ初期化→セッション監視
+                    var detectedJoinTime = currentRoomJoinTime;
                     _ = Task.Run(async () =>
                     {
+                        await Task.Delay(TimeSpan.FromSeconds(10));
+                        // 状況が変わっていないか再確認
+                        if (!_isVRChatRunning) return;
+                        if (_logParser.LastRoomJoinTime != detectedJoinTime) return;
+
+                        try
+                        {
+                            _startOscServicesAction();
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine($"[初期化マネージャー] OSCサーバー起動コールバックでエラー: {ex.Message}");
+                        }
+
                         await ExecuteOscCameraInitialization();
                         StartSessionMonitoring();
                     });
@@ -214,14 +232,32 @@ namespace VSA_launcher.VRC_Game
                     _lastRoomJoinTime = latestRoomJoinTime;
                     Console.WriteLine($"[初期化マネージャー] ルーム参加検知: {latestRoomJoinTime:yyyy-MM-dd HH:mm:ss}");
                     
-                    // OSCカメラ初期化処理を実行
-                    _ = Task.Run(async () => await ExecuteOscCameraInitialization());
-                    
-                    // ルーム参加監視を停止（1回のセッションで1回のみ）
-                    StopRoomJoinMonitoring();
-                    
-                    // セッション監視に切り替え（30秒ごとにVRChat起動状態を確認）
-                    StartSessionMonitoring();
+                    // 10秒待機後にOSCサーバー起動→カメラ初期化→セッション監視へ
+                    var detectedJoinTime = latestRoomJoinTime;
+                    _ = Task.Run(async () =>
+                    {
+                        await Task.Delay(TimeSpan.FromSeconds(10));
+                        // 状況が変わっていないか再確認
+                        if (!_isVRChatRunning) return;
+                        if (_logParser.LastRoomJoinTime != detectedJoinTime) return;
+
+                        try
+                        {
+                            _startOscServicesAction();
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine($"[初期化マネージャー] OSCサーバー起動コールバックでエラー: {ex.Message}");
+                        }
+
+                        await ExecuteOscCameraInitialization();
+
+                        // ルーム参加監視を停止（1回のセッションで1回のみ）
+                        StopRoomJoinMonitoring();
+                        
+                        // セッション監視に切り替え（30秒ごとにVRChat起動状態を確認）
+                        StartSessionMonitoring();
+                    });
                 }
                 else
                 {

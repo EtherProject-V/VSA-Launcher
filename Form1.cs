@@ -12,6 +12,7 @@ using System.Drawing.Imaging;
 using VSA_launcher.OSCServer; // 追加
 using VSA_launcher.VRC_Game; // VRChatInitializationManager用
 using VRC.OSCQuery; // 追加
+using VSA_launcher.devModule;
 
 namespace VSA_launcher
 {
@@ -59,6 +60,9 @@ namespace VSA_launcher
         private RadioButton integral_radioButton = null!;
         private RadioButton virtualLens2_radioButton = null!;
         private TextBox CameraUsetextbox = null!;
+
+        // Dev metadata monitor
+        private DevMetadataMonitor? _devMetadataMonitor;
 
         public VSA_launcher()
         {
@@ -184,7 +188,15 @@ namespace VSA_launcher
                     _vrchatInitializationManager = new VRC_Game.VRChatInitializationManager(
                         _logParser,
                         _oscParameterSender,
-                        UpdateStatusInfo
+                        UpdateStatusInfo,
+                        () =>
+                        {
+                            // 二重起動防止は内部フラグで判定
+                            if (!_oscListenerStarted || !_oscSenderStarted)
+                            {
+                                StartOscServices();
+                            }
+                        }
                     );
                     _vrchatInitializationManager.Start();
                     Console.WriteLine("[Form1] VRChat初期化マネージャーを開始しました");
@@ -212,22 +224,43 @@ namespace VSA_launcher
                         }
 
                         // OSCStatusタブの表示/非表示制御
-                        if (tabControl != null && OSCStatus != null)
+                        if (tabControl != null && dev_OSCStatus != null)
                         {
                             if (devMode_checkBox.Checked)
                             {
                                 // 開発モードON: OSCStatusタブを表示
-                                if (!tabControl.TabPages.Contains(OSCStatus))
+                                if (!tabControl.TabPages.Contains(dev_OSCStatus))
                                 {
-                                    tabControl.TabPages.Add(OSCStatus);
+                                    tabControl.TabPages.Add(dev_OSCStatus);
                                 }
                             }
                             else
                             {
                                 // 開発モードOFF: OSCStatusタブを非表示
-                                if (tabControl.TabPages.Contains(OSCStatus))
+                                if (tabControl.TabPages.Contains(dev_OSCStatus))
                                 {
-                                    tabControl.TabPages.Remove(OSCStatus);
+                                    tabControl.TabPages.Remove(dev_OSCStatus);
+                                }
+                            }
+                        }
+
+                        // MetadataStatusタブの表示/非表示制御（OSCStatusと同様）
+                        if (tabControl != null && dev_MetadataStatus != null)
+                        {
+                            if (devMode_checkBox.Checked)
+                            {
+                                // 開発モードON: MetadataStatusタブを表示
+                                if (!tabControl.TabPages.Contains(dev_MetadataStatus))
+                                {
+                                    tabControl.TabPages.Add(dev_MetadataStatus);
+                                }
+                            }
+                            else
+                            {
+                                // 開発モードOFF: MetadataStatusタブを非表示
+                                if (tabControl.TabPages.Contains(dev_MetadataStatus))
+                                {
+                                    tabControl.TabPages.Remove(dev_MetadataStatus);
                                 }
                             }
                         }
@@ -247,11 +280,20 @@ namespace VSA_launcher
                 }
 
                 // OSCStatusタブの初期状態を設定（開発モードがOFFの場合は非表示）
-                if (tabControl != null && OSCStatus != null && devMode_checkBox != null)
+                if (tabControl != null && dev_OSCStatus != null && devMode_checkBox != null)
                 {
-                    if (!devMode_checkBox.Checked && tabControl.TabPages.Contains(OSCStatus))
+                    if (!devMode_checkBox.Checked && tabControl.TabPages.Contains(dev_OSCStatus))
                     {
-                        tabControl.TabPages.Remove(OSCStatus);
+                        tabControl.TabPages.Remove(dev_OSCStatus);
+                    }
+                }
+
+                // MetadataStatusタブの初期状態を設定（開発モードがOFFの場合は非表示）
+                if (tabControl != null && dev_MetadataStatus != null && devMode_checkBox != null)
+                {
+                    if (!devMode_checkBox.Checked && tabControl.TabPages.Contains(dev_MetadataStatus))
+                    {
+                        tabControl.TabPages.Remove(dev_MetadataStatus);
                     }
                 }
 
@@ -632,15 +674,8 @@ namespace VSA_launcher
 
         protected override void OnFormClosing(FormClosingEventArgs e)
         {
-            if (e.CloseReason == CloseReason.UserClosing)
-            {
-                e.Cancel = true;
-                Hide();
-            }
-            else
-            {
-                base.OnFormClosing(e);
-            }
+            try { _devMetadataMonitor?.Dispose(); } catch { }
+            base.OnFormClosing(e);
         }
 
         private void toolStripTextBox1_Click(object sender, EventArgs e)
@@ -1222,10 +1257,10 @@ namespace VSA_launcher
             {
                 _isVRChatRunning = currentVRChatStatus;
 
-                // VRChat起動時にOSC機能を開始
-                if (_isVRChatRunning && (!_oscListenerStarted || !_oscSenderStarted))
+                // VRChat起動時は、ルーム参加後10秒の遅延起動に委ねる（ここでは起動しない）
+                if (_isVRChatRunning)
                 {
-                    StartOscServices();
+                    Console.WriteLine("[OSC待機] VRChat起動検知 - ルーム参加後10秒でOSCを起動します");
                 }
                 // VRChat停止時にOSC機能を停止
                 else if (!_isVRChatRunning && (_oscListenerStarted || _oscSenderStarted))
