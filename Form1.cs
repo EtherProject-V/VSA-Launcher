@@ -51,6 +51,8 @@ namespace VSA_launcher
         private bool _hasExecutedOscInitialization = false; // アプリセッション中のOSC初期化実行フラグ
 
         private VRC_Game.VRChatInitializationManager? _vrchatInitializationManager;
+        // トレイ常駐のための終了許可フラグ（トレイの「終了」以外はアプリを終了しない）
+        private bool _allowExit = false;
 
         // 設定ファイルから読み込んだスタートアップ設定
         private bool _startWithWindows = false;
@@ -316,6 +318,13 @@ namespace VSA_launcher
                                MessageBoxIcon.Error);
                 Application.Exit();
             }
+        }
+
+        // トレイの「終了」メニューから呼ぶ安全な終了口
+        public void ExitApplication()
+        {
+            _allowExit = true;
+            Application.Exit();
         }
 
         // ファイル名フォーマットコンボボックスの初期化
@@ -674,8 +683,29 @@ namespace VSA_launcher
 
         protected override void OnFormClosing(FormClosingEventArgs e)
         {
+            // ユーザーの×ボタンなどで閉じる場合は、トレイ常駐に切り替える（終了フラグが立っていないとき）
+            if (!_allowExit && e.CloseReason == CloseReason.UserClosing)
+            {
+                e.Cancel = true;
+                Hide();
+                ShowInTaskbar = false;
+                if (notifyIcon != null) notifyIcon.Visible = true;
+                return;
+            }
+
             try { _devMetadataMonitor?.Dispose(); } catch { }
             base.OnFormClosing(e);
+        }
+
+        protected override void OnResize(EventArgs e)
+        {
+            base.OnResize(e);
+            if (WindowState == FormWindowState.Minimized)
+            {
+                Hide();
+                ShowInTaskbar = false;
+                if (notifyIcon != null) notifyIcon.Visible = true;
+            }
         }
 
         private void toolStripTextBox1_Click(object sender, EventArgs e)
@@ -2146,7 +2176,6 @@ namespace VSA_launcher
             // イベントハンドラの設定
             _notifyIcon.DoubleClick += (sender, e) => ShowSettings();
             
-            // メニューの各項目を調べて名前で見つける - より安全な方法
             foreach (ToolStripItem item in _contextMenu.Items)
             {
                 if (item.Text == "設定")
@@ -2155,11 +2184,12 @@ namespace VSA_launcher
                 }
                 else if (item.Text == "終了")
                 {
-                    item.Click += (sender, e) => Application.Exit();
+                    // フォーム側の安全な終了口を呼び出す
+                    item.Click += (sender, e) => _mainForm.ExitApplication();
                 }
             }
             
-            // モニタリング処理を開始
+            // モニタリング処理を開始（必要に応じて）
             StartMainAppMonitoring();
         }
         public void LaunchMainApplication()
@@ -2169,6 +2199,7 @@ namespace VSA_launcher
 
         private void ShowSettings()
         {
+            _mainForm.ShowInTaskbar = true;
             _mainForm.Show();
             _mainForm.WindowState = FormWindowState.Normal;
             _mainForm.Activate();
