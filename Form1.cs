@@ -66,6 +66,14 @@ namespace VSA_launcher
         // Dev metadata monitor
         private DevMetadataMonitor? _devMetadataMonitor;
 
+        // VDI管理
+        private VdiInstallManager _vdiInstallManager = null!;
+        private VdiLauncher _vdiLauncher = null!;
+        private System.Windows.Forms.Timer? _vdiCheckTimer;
+        private int _vdiCheckCount = 0;
+        private const int VDI_CHECK_INTERVAL = 10000; // 10秒
+        private const int VDI_CHECK_MAX_COUNT = 18; // 3分間(10秒 × 18回)
+
         public VSA_launcher()
         {
             try
@@ -142,6 +150,10 @@ namespace VSA_launcher
                 }
 
                 _logParser = new VRChatLogParser();
+
+                // VDI管理の初期化
+                _vdiInstallManager = new VdiInstallManager();
+                _vdiLauncher = new VdiLauncher(_settings);
 
                 System.Windows.Forms.Timer logUpdateTimer = new System.Windows.Forms.Timer();
                 logUpdateTimer.Interval = 2000; // 2秒ごとに更新
@@ -424,6 +436,9 @@ namespace VSA_launcher
         {
             // 設定を読み込み、UIに反映
             ApplySettingsToUI();
+
+            // VDI設定の初期化
+            InitializeVdiSettings();
 
             // スタートアップ設定の初期化
             InitializeStartupSetting();
@@ -1433,18 +1448,18 @@ namespace VSA_launcher
             try
             {
                 _isVRChatRunning = IsVRChatRunning();
-                
+
                 // VRChatが既に起動している場合の処理
                 if (_isVRChatRunning)
                 {
                     Console.WriteLine("[初期化] VRChat.exeが既に起動しています");
-                    
+
                     // OSC機能を開始
                     StartOscServices();
-                    
+
                     // UIの更新
                     UpdateVRChatStatusLabel();
-                    
+
                     // カメラ設定が有効で設定が適用済みの場合、2分後にOSC初期化を実行
                     if ((cameraSettomg_checkBox?.Checked == true) && _cameraSettingsApplied)
                     {
@@ -1465,7 +1480,7 @@ namespace VSA_launcher
                     {
                         Console.WriteLine($"[初期化] OSC初期化条件未達成 - カメラ設定有効: {cameraSettomg_checkBox?.Checked}, 設定適用済み: {_cameraSettingsApplied}");
                     }
-                    
+
                     // 従来のカメラ初期化も実行
                     if (!_hasInitializedCamera)
                     {
@@ -1549,7 +1564,7 @@ namespace VSA_launcher
         {
             // 何らかの追加処理が必要な場合はここに記述
         }
-        
+
         /// <summary>
         /// useVirtuallens2_checkBoxの変更イベントハンドラ
         /// </summary>
@@ -1912,10 +1927,10 @@ namespace VSA_launcher
                 }
 
                 Debug.WriteLine("カメラ設定をUIに読み込み完了");
-                
+
                 // UIの値でOscDataStoreを初期化
                 UpdateOscDataStoreFromUI();
-                
+
                 // 設定読み込み完了時点で設定適用済みフラグを設定
                 // (appsettings.jsonから設定が読み込まれた場合は適用済みとして扱う)
                 _cameraSettingsApplied = true;
@@ -1954,10 +1969,10 @@ namespace VSA_launcher
                     Integral_ShutterSpeed_textBox.Text = "50";
 
                 Debug.WriteLine("デフォルトカメラ値を設定しました");
-                
+
                 // デフォルト値でOscDataStoreも更新
                 UpdateOscDataStoreFromUI();
-                
+
                 // デフォルト値設定時点で設定適用済みフラグを設定
                 _cameraSettingsApplied = true;
             }
@@ -2153,6 +2168,443 @@ namespace VSA_launcher
         }
 
         private void CameraSetting_groupBox_Enter(object sender, EventArgs e)
+        {
+
+        }
+
+        private void screenshotsFolder_label_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void VDIAutoLaunch_label_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void VDIModelDefault_radioButton_CheckedChanged(object sender, EventArgs e)
+        {
+
+        }
+
+        private void label4_Click_4(object sender, EventArgs e)
+        {
+
+        }
+
+        private void label7_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        #region VDI設定関連メソッド
+
+        /// <summary>
+        /// VDI設定の初期化
+        /// </summary>
+        private void InitializeVdiSettings()
+        {
+            try
+            {
+                // VDI設定がnullの場合は初期化
+                if (_settings.VdiSettings == null)
+                {
+                    _settings.VdiSettings = new VdiSettings();
+                }
+
+                // VDIのインストール状態をチェック
+                bool vdiInstalled = _vdiInstallManager.CheckVdiInstalled();
+                string vdiVersion = _vdiInstallManager.GetInstalledVdiVersion();
+
+                // UIに状態を反映
+                UpdateVdiInstallStatus(vdiInstalled, vdiVersion);
+
+                // 設定値をUIに反映
+                ApplyVdiSettingsToUI();
+
+                // イベントハンドラの登録
+                RegisterVdiEventHandlers();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"VDI設定の初期化中にエラーが発生しました: {ex.Message}",
+                    "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        /// <summary>
+        /// VDI設定をUIに反映
+        /// </summary>
+        private void ApplyVdiSettingsToUI()
+        {
+            // 自動起動チェックボックス
+            VDIAutoLaunch_checkBox.Checked = _settings.VdiSettings.AutoLaunchOnCapture;
+
+            // ウィンドウサイズ設定
+            switch (_settings.VdiSettings.DefaultWindowMode)
+            {
+                case "FullScreen":
+                    VDIWindowSizeFullScreen_radioButton.Checked = true;
+                    break;
+                case "Custom":
+                    VDIWindowSizeCustom_radioButton.Checked = true;
+                    break;
+                default:
+                    VDIWindowSizeDefault_radioButton.Checked = true;
+                    break;
+            }
+
+            // カスタム解像度のコンボボックスに値を追加
+            if (!VDIWindowSizeCustom_comboBox.Items.Contains(_settings.VdiSettings.CustomResolution))
+            {
+                VDIWindowSizeCustom_comboBox.Items.Add(_settings.VdiSettings.CustomResolution);
+            }
+            VDIWindowSizeCustom_comboBox.Text = _settings.VdiSettings.CustomResolution;
+
+            // ウィンドウ制御チェックボックス
+            VDICloseWindows_checkBox.Checked = _settings.VdiSettings.CloseOtherWindows;
+
+            // カスタム解像度グループボックスの有効/無効
+            VDIWindowCalc_groupBox.Enabled = VDIWindowSizeCustom_radioButton.Checked;
+        }
+
+        /// <summary>
+        /// VDIインストール状態の更新
+        /// </summary>
+        private void UpdateVdiInstallStatus(bool installed, string version)
+        {
+            if (installed)
+            {
+                // インストール済みの場合
+                VDIInstall_label.Text = "VDI-solid: インストール済み";
+                VDIInstall_label.Text = "インストール済み";
+                VDIInstall_label.Location = new System.Drawing.Point(3, 7);
+                VDIInstall_button.Visible = false;
+                VDIRepository_label.Visible = false;
+                VDIInstall_panel.Visible = false;
+                GithubRepository_LinkLabel.Visible = false;
+
+                if (!string.IsNullOrEmpty(version))
+                {
+                    VDIInstall_label.Text = $"VDI-solid: インストール済み (v{version})";
+                }
+
+                // 定期検査タイマーを停止
+                StopVdiCheckTimer();
+            }
+            else
+            {
+                // 未インストールの場合
+                VDIInstall_label.Text = "VDI-solid: 未インストール";
+                VDIInstall_label.Text = "VDIがインストールされていません。下のボタンを押して\nインストーラーをダウンロードしてください";
+                VDIInstall_label.Location = new System.Drawing.Point(66, 92);
+                VDIInstall_button.Visible = true;
+                VDIInstall_button.Text = "インストーラーを\nダウンロード";
+                VDIRepository_label.Visible = true;
+                VDIInstall_panel.Visible = true;
+                GithubRepository_LinkLabel.Visible = true;
+            }
+        }
+
+        /// <summary>
+        /// VDIイベントハンドラの登録
+        /// </summary>
+        private void RegisterVdiEventHandlers()
+        {
+            VDIInstall_button.Click += VDIInstall_button_Click;
+            VDIWindowSizeDefault_radioButton.CheckedChanged += VDIWindowSize_RadioButton_CheckedChanged;
+            VDIWindowSizeFullScreen_radioButton.CheckedChanged += VDIWindowSize_RadioButton_CheckedChanged;
+            VDIWindowSizeCustom_radioButton.CheckedChanged += VDIWindowSize_RadioButton_CheckedChanged;
+            VDIWindowCalcAdd_button.Click += VDIWindowCalcAdd_button_Click;
+            VDICloseWindows_checkBox.CheckedChanged += VDICloseWindows_checkBox_CheckedChanged;
+        }
+
+        /// <summary>
+        /// VDIインストールボタンクリック
+        /// </summary>
+        private async void VDIInstall_button_Click(object? sender, EventArgs e)
+        {
+            CancellationTokenSource? cts = null;
+            string installerPath = string.Empty;
+
+            try
+            {
+                VDIInstall_button.Enabled = false;
+                VDIInstall_button.Text = "情報取得中...";
+
+                // 最新版情報を取得
+                var releaseInfo = await _vdiInstallManager.GetLatestVdiVersionAsync();
+
+                if (string.IsNullOrEmpty(releaseInfo.DownloadUrl))
+                {
+                    MessageBox.Show("インストーラーのダウンロードURLが見つかりませんでした。",
+                        "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
+                }
+
+                // ダウンロード確認
+                var confirmResult = MessageBox.Show(
+                    $"VDI-solid {releaseInfo.TagName} をダウンロードしますか？\n\n" +
+                    $"ファイル名: {releaseInfo.FileName}\n" +
+                    $"公開日: {releaseInfo.PublishedAt:yyyy/MM/dd}",
+                    "確認",
+                    MessageBoxButtons.YesNo,
+                    MessageBoxIcon.Question);
+
+                if (confirmResult != DialogResult.Yes)
+                {
+                    return;
+                }
+
+                // キャンセルトークン作成
+                cts = new CancellationTokenSource();
+
+                // ダウンロード進捗表示
+                var progress = new Progress<int>(percent =>
+                {
+                    VDIInstall_button.Text = $"ダウンロード中...\n{percent}%";
+                });
+
+                VDIInstall_button.Text = "ダウンロード中...\n0%";
+
+                // ダウンロード実行
+                installerPath = await _vdiInstallManager.DownloadVdiInstallerAsync(
+                    releaseInfo.DownloadUrl,
+                    releaseInfo.FileName,
+                    progress,
+                    cts.Token);
+
+                // ダウンロード完了メッセージとインストーラー起動確認
+                var launchResult = MessageBox.Show(
+                    "インストーラーのダウンロードが完了しました。\n" +
+                    "インストーラーを起動しますか？\n\n" +
+                    "インストール完了後、VSA-launcherを再起動してVDIの検出を行ってください。",
+                    "ダウンロード完了",
+                    MessageBoxButtons.YesNo,
+                    MessageBoxIcon.Information);
+
+                if (launchResult == DialogResult.Yes)
+                {
+                    bool launched = _vdiInstallManager.LaunchInstaller(installerPath);
+
+                    if (launched)
+                    {
+                        // 設定を更新
+                        _settings.VdiSettings.LastInstalledVersion = releaseInfo.TagName;
+                        _settings.VdiSettings.LastCheckedDate = DateTime.Now;
+                        SettingsManager.SaveSettings(_settings);
+
+                        // VDI定期検査タイマーを開始(3分間、10秒おきに検査)
+                        StartVdiCheckTimer();
+
+                        MessageBox.Show(
+                            "インストーラーを起動しました。\n" +
+                            "インストール完了後、自動的にVDIの検出を行います。(3分間監視)",
+                            "インストーラー起動",
+                            MessageBoxButtons.OK,
+                            MessageBoxIcon.Information);
+                    }
+                    else
+                    {
+                        MessageBox.Show(
+                            "インストーラーの起動に失敗しました。\n" +
+                            $"手動で実行してください: {installerPath}",
+                            "エラー",
+                            MessageBoxButtons.OK,
+                            MessageBoxIcon.Error);
+                    }
+                }
+                else
+                {
+                    // インストーラーを起動しない場合、パスを表示
+                    MessageBox.Show(
+                        $"インストーラーは以下の場所に保存されています:\n{installerPath}",
+                        "情報",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Information);
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                MessageBox.Show("ダウンロードがキャンセルされました。",
+                    "キャンセル", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"エラーが発生しました: {ex.Message}",
+                    "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            finally
+            {
+                cts?.Dispose();
+                VDIInstall_button.Enabled = true;
+                VDIInstall_button.Text = "インストーラーを\nダウンロード";
+            }
+        }
+
+        /// <summary>
+        /// 自動起動チェックボックス変更
+        /// </summary>
+        private void VDIAutoLaunch_checkBox_CheckedChanged(object? sender, EventArgs e)
+        {
+            _settings.VdiSettings.AutoLaunchOnCapture = VDIAutoLaunch_checkBox.Checked;
+            SettingsManager.SaveSettings(_settings);
+        }
+
+        /// <summary>
+        /// ウィンドウサイズラジオボタン変更
+        /// </summary>
+        private void VDIWindowSize_RadioButton_CheckedChanged(object? sender, EventArgs e)
+        {
+            if (sender is RadioButton radioButton && radioButton.Checked)
+            {
+                if (radioButton == VDIWindowSizeDefault_radioButton)
+                {
+                    _settings.VdiSettings.DefaultWindowMode = "Default";
+                    VDIWindowCalc_groupBox.Enabled = false;
+                }
+                else if (radioButton == VDIWindowSizeFullScreen_radioButton)
+                {
+                    _settings.VdiSettings.DefaultWindowMode = "FullScreen";
+                    VDIWindowCalc_groupBox.Enabled = false;
+                }
+                else if (radioButton == VDIWindowSizeCustom_radioButton)
+                {
+                    _settings.VdiSettings.DefaultWindowMode = "Custom";
+                    VDIWindowCalc_groupBox.Enabled = true;
+                }
+
+                SettingsManager.SaveSettings(_settings);
+            }
+        }
+
+        /// <summary>
+        /// カスタム解像度追加ボタンクリック
+        /// </summary>
+        private void VDIWindowCalcAdd_button_Click(object? sender, EventArgs e)
+        {
+            try
+            {
+                // 幅と高さを取得
+                if (!int.TryParse(VDIWindowCalcWidth_textBox.Text, out int width) || width <= 0)
+                {
+                    MessageBox.Show("幅に正しい数値を入力してください。",
+                        "入力エラー", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+
+                if (!int.TryParse(VDIWindowCalcHeight_textBox.Text, out int height) || height <= 0)
+                {
+                    MessageBox.Show("高さに正しい数値を入力してください。",
+                        "入力エラー", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+
+                // 解像度文字列を作成
+                string resolution = $"{width}x{height}";
+
+                // コンボボックスに追加（重複チェック）
+                if (!VDIWindowSizeCustom_comboBox.Items.Contains(resolution))
+                {
+                    VDIWindowSizeCustom_comboBox.Items.Add(resolution);
+                }
+
+                // 選択状態にする
+                VDIWindowSizeCustom_comboBox.Text = resolution;
+
+                // 設定を保存
+                _settings.VdiSettings.CustomResolution = resolution;
+                SettingsManager.SaveSettings(_settings);
+
+                // 入力欄をクリア
+                VDIWindowCalcWidth_textBox.Clear();
+                VDIWindowCalcHeight_textBox.Clear();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"エラーが発生しました: {ex.Message}",
+                    "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        /// <summary>
+        /// ウィンドウ制御チェックボックス変更
+        /// </summary>
+        private void VDICloseWindows_checkBox_CheckedChanged(object? sender, EventArgs e)
+        {
+            _settings.VdiSettings.CloseOtherWindows = VDICloseWindows_checkBox.Checked;
+            SettingsManager.SaveSettings(_settings);
+        }
+
+        /// <summary>
+        /// VDI定期検査タイマーを開始
+        /// </summary>
+        private void StartVdiCheckTimer()
+        {
+            if (_vdiCheckTimer == null)
+            {
+                _vdiCheckTimer = new System.Windows.Forms.Timer();
+                _vdiCheckTimer.Interval = VDI_CHECK_INTERVAL;
+                _vdiCheckTimer.Tick += VdiCheckTimer_Tick;
+            }
+
+            _vdiCheckCount = 0;
+            _vdiCheckTimer.Start();
+        }
+
+        /// <summary>
+        /// VDI定期検査タイマーを停止
+        /// </summary>
+        private void StopVdiCheckTimer()
+        {
+            if (_vdiCheckTimer != null)
+            {
+                _vdiCheckTimer.Stop();
+                _vdiCheckCount = 0;
+            }
+        }
+
+        /// <summary>
+        /// VDI定期検査タイマーのイベント処理
+        /// </summary>
+        private void VdiCheckTimer_Tick(object? sender, EventArgs e)
+        {
+            _vdiCheckCount++;
+
+            // VDIのインストール状態をチェック
+            bool vdiInstalled = _vdiInstallManager.CheckVdiInstalled();
+
+            if (vdiInstalled)
+            {
+                // インストールが検出されたらタイマーを停止してUIを更新
+                string vdiVersion = _vdiInstallManager.GetInstalledVdiVersion();
+                UpdateVdiInstallStatus(true, vdiVersion);
+
+                // VDI Launcherを初期化
+                if (_vdiLauncher == null)
+                {
+                    _vdiLauncher = new VdiLauncher(_settings);
+                }
+            }
+            else if (_vdiCheckCount >= VDI_CHECK_MAX_COUNT)
+            {
+                // 3分経過しても検出されない場合はタイマーを停止
+                StopVdiCheckTimer();
+            }
+        }
+
+        #endregion
+
+        private void GithubRepository_LinkLabel_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
+        {
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = "https://github.com/JunseiOgawa/VDI-solid",
+                UseShellExecute = true
+            });
+        }
+
+        private void VDIInstall_label_Click(object sender, EventArgs e)
         {
 
         }

@@ -30,17 +30,30 @@ namespace VSA_launcher
         // VDI実行ファイルのパスを取得
         public string GetVdiExecutablePath()
         {
-            // 1. レジストリチェック（HKEY_LOCAL_MACHINE）
+            // 1. Tauriアプリのデフォルトインストール先（LocalAppData）
+            string[] localAppDataPaths = new[]
+            {
+                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "vdi-solid", "vdi.exe"),
+                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Programs", "vdi-solid", "vdi.exe")
+            };
+
+            foreach (var localPath in localAppDataPaths)
+            {
+                if (File.Exists(localPath))
+                    return localPath;
+            }
+
+            // 2. レジストリチェック（HKEY_LOCAL_MACHINE）
             string path = GetPathFromRegistry(RegistryHive.LocalMachine, @"SOFTWARE\VDI-solid", "InstallPath");
             if (!string.IsNullOrEmpty(path) && File.Exists(path))
                 return path;
 
-            // 2. レジストリチェック（HKEY_CURRENT_USER）
+            // 3. レジストリチェック（HKEY_CURRENT_USER）
             path = GetPathFromRegistry(RegistryHive.CurrentUser, @"SOFTWARE\VDI-solid", "InstallPath");
             if (!string.IsNullOrEmpty(path) && File.Exists(path))
                 return path;
 
-            // 3. Program Filesスキャン
+            // 4. Program Filesスキャン
             string[] programFilesPaths = new[]
             {
                 Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "VDI-solid", "vdi.exe"),
@@ -52,14 +65,6 @@ namespace VSA_launcher
                 if (File.Exists(programPath))
                     return programPath;
             }
-
-            // 4. AppData検索
-            string appDataPath = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                "Programs", "vdi-solid", "vdi.exe");
-
-            if (File.Exists(appDataPath))
-                return appDataPath;
 
             return string.Empty;
         }
@@ -221,7 +226,7 @@ namespace VSA_launcher
         }
 
         // VDIインストーラーを実行
-        public bool InstallVdi(string installerPath)
+        public bool LaunchInstaller(string installerPath)
         {
             if (!File.Exists(installerPath))
                 return false;
@@ -231,36 +236,31 @@ namespace VSA_launcher
                 var processStartInfo = new ProcessStartInfo
                 {
                     FileName = installerPath,
-                    UseShellExecute = true,
-                    Verb = "runas" // 管理者権限で実行
+                    UseShellExecute = true
                 };
 
-                // サイレントインストールフラグ（インストーラーがサポートしている場合）
-                if (installerPath.EndsWith(".msi", StringComparison.OrdinalIgnoreCase))
-                {
-                    processStartInfo.Arguments = "/qn"; // MSIのサイレントインストール
-                }
-                else if (installerPath.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
-                {
-                    // NSIS/Inno Setupの一般的なサイレントフラグを試す
-                    processStartInfo.Arguments = "/S";
-                }
-
-                using (var process = Process.Start(processStartInfo))
-                {
-                    if (process != null)
-                    {
-                        // インストール完了を待機（タイムアウト5分）
-                        process.WaitForExit(300000);
-                        return process.ExitCode == 0;
-                    }
-                }
-
-                return false;
+                Process.Start(processStartInfo);
+                return true;
             }
             catch (Exception)
             {
                 return false;
+            }
+        }
+
+        // ダウンロードしたインストーラーを削除
+        public void CleanupInstaller(string installerPath)
+        {
+            try
+            {
+                if (File.Exists(installerPath))
+                {
+                    File.Delete(installerPath);
+                }
+            }
+            catch (Exception)
+            {
+                // エラーは無視
             }
         }
     }

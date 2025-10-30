@@ -95,6 +95,28 @@
             VirtualLens2_Aperture_textBox = new TextBox();
             VirtualLens2_Aperture_label = new Label();
             CameraSettingApply_button = new Button();
+            VDI = new TabPage();
+            VDIInstall_label = new Label();
+            VDIInstall_button = new Button();
+            VDIRepository_label = new Label();
+            VDIInstall_panel = new Panel();
+            GithubRepository_LinkLabel = new LinkLabel();
+            label6 = new Label();
+            VDICloseWindows_checkBox = new CheckBox();
+            VDIAutoLaunch_label = new Label();
+            VDIAutoLaunch_checkBox = new CheckBox();
+            VDIWindowSize_groupBox = new GroupBox();
+            VDIWindowCalc_groupBox = new GroupBox();
+            VDIWindowCalcWidth_textBox = new TextBox();
+            VDIWindowSizeCustom_comboBox = new ComboBox();
+            VDIWindowCalcHeight_textBox = new TextBox();
+            VDIWindowMulti_label = new Label();
+            label7 = new Label();
+            VDIWindowCalcAdd_button = new Button();
+            label4 = new Label();
+            VDIWindowSizeDefault_radioButton = new RadioButton();
+            VDIWindowSizeCustom_radioButton = new RadioButton();
+            VDIWindowSizeFullScreen_radioButton = new RadioButton();
             LICENSE = new TabPage();
             devMode_label = new Label();
             devMode_checkBox = new CheckBox();
@@ -108,9 +130,9 @@
             label5 = new Label();
             OSCLog_checkBox = new CheckBox();
             dev_MetadataStatus = new TabPage();
-            toolTip1 = new ToolTip(components);
-            dev_Metadata_richTextBox = new RichTextBox();
             dev_Metadata_label = new Label();
+            dev_Metadata_richTextBox = new RichTextBox();
+            toolTip1 = new ToolTip(components);
             contextMenuStrip1.SuspendLayout();
             statusStrip1.SuspendLayout();
             fileSubdivision_Group.SuspendLayout();
@@ -124,6 +146,10 @@
             useCamera_groupBox.SuspendLayout();
             Integral_groupBox.SuspendLayout();
             VirtualLens2_groupBox.SuspendLayout();
+            VDI.SuspendLayout();
+            VDIInstall_panel.SuspendLayout();
+            VDIWindowSize_groupBox.SuspendLayout();
+            VDIWindowCalc_groupBox.SuspendLayout();
             LICENSE.SuspendLayout();
             dev_OSCStatus.SuspendLayout();
             dev_MetadataStatus.SuspendLayout();
@@ -202,6 +228,7 @@
             screenshotsFolder_label.Size = new Size(118, 15);
             screenshotsFolder_label.TabIndex = 2;
             screenshotsFolder_label.Text = "スクリーンショットフォルダ";
+            screenshotsFolder_label.Click += screenshotsFolder_label_Click;
             // 
             // outputFolder_label
             // 
@@ -395,6 +422,7 @@
             tabControl.Controls.Add(main);
             tabControl.Controls.Add(metaData);
             tabControl.Controls.Add(CameraSettings);
+            tabControl.Controls.Add(VDI);
             tabControl.Controls.Add(LICENSE);
             tabControl.Controls.Add(dev_OSCStatus);
             tabControl.Controls.Add(dev_MetadataStatus);
@@ -853,6 +881,240 @@
             CameraSettingApply_button.Text = "設定適用";
             CameraSettingApply_button.UseVisualStyleBackColor = true;
             // 
+            // VDI
+            // 
+            VDI.Controls.Add(VDIInstall_panel);
+            VDI.Controls.Add(label6);
+            VDI.Controls.Add(VDICloseWindows_checkBox);
+            VDI.Controls.Add(VDIAutoLaunch_label);
+            VDI.Controls.Add(VDIAutoLaunch_checkBox);
+            VDI.Controls.Add(VDIWindowSize_groupBox);
+            VDI.Location = new Point(4, 24);
+            VDI.Name = "VDI";
+            VDI.Size = new Size(380, 329);
+            VDI.TabIndex = 6;
+            VDI.Text = "VDI設定";
+            VDI.UseVisualStyleBackColor = true;
+            // 
+            // VDIInstall_label
+            // 
+            VDIInstall_label.Anchor = AnchorStyles.None;
+            VDIInstall_label.AutoSize = true;
+            VDIInstall_label.Location = new Point(65, 95);
+            VDIInstall_label.Name = "VDIInstall_label";
+            VDIInstall_label.Size = new Size(250, 30);
+            VDIInstall_label.TabIndex = 3;
+            VDIInstall_label.Text = "VDIがインストールされていません。下のボタンを押して\r\nインストーラーをダウンロードしてください";
+            VDIInstall_label.TextAlign = ContentAlignment.MiddleCenter;
+            VDIInstall_label.Click += VDIInstall_label_Click;
+            // 
+            // VDIInstall_button
+            // 
+            VDIInstall_button.Location = new Point(106, 125);
+            VDIInstall_button.Name = "VDIInstall_button";
+            VDIInstall_button.Size = new Size(170, 74);
+            VDIInstall_button.TabIndex = 4;
+            VDIInstall_button.Text = "インストールボタン";
+            VDIInstall_button.UseVisualStyleBackColor = true;
+            // 
+            // VDIRepository_label
+            // 
+            VDIRepository_label.Anchor = AnchorStyles.None;
+            VDIRepository_label.AutoSize = true;
+            VDIRepository_label.Location = new Point(0, 202);
+            VDIRepository_label.Name = "VDIRepository_label";
+            VDIRepository_label.Size = new Size(377, 30);
+            VDIRepository_label.TabIndex = 5;
+            VDIRepository_label.Text = "ダウンロードの警告が不安であればgithubにそのままソースコードが載っているので\r\nそちらからインストールしてください";
+            VDIRepository_label.TextAlign = ContentAlignment.MiddleCenter;
+            // 
+            // VDIInstall_panel
+            // 
+            VDIInstall_panel.Controls.Add(VDIInstall_label);
+            VDIInstall_panel.Controls.Add(GithubRepository_LinkLabel);
+            VDIInstall_panel.Controls.Add(VDIInstall_button);
+            VDIInstall_panel.Controls.Add(VDIRepository_label);
+            VDIInstall_panel.Location = new Point(0, 0);
+            VDIInstall_panel.Name = "VDIInstall_panel";
+            VDIInstall_panel.Size = new Size(380, 326);
+            VDIInstall_panel.TabIndex = 12;
+            // 
+            // GithubRepository_LinkLabel
+            // 
+            GithubRepository_LinkLabel.AutoSize = true;
+            GithubRepository_LinkLabel.Location = new Point(124, 245);
+            GithubRepository_LinkLabel.Name = "GithubRepository_LinkLabel";
+            GithubRepository_LinkLabel.Size = new Size(132, 15);
+            GithubRepository_LinkLabel.TabIndex = 0;
+            GithubRepository_LinkLabel.TabStop = true;
+            GithubRepository_LinkLabel.Text = "githubのリポジトリはこちら";
+            GithubRepository_LinkLabel.LinkClicked += GithubRepository_LinkLabel_LinkClicked;
+            // 
+            // label6
+            // 
+            label6.AutoSize = true;
+            label6.Location = new Point(3, 252);
+            label6.Name = "label6";
+            label6.Size = new Size(200, 15);
+            label6.TabIndex = 11;
+            label6.Text = "起動する際にほかのVDIウィンドウを閉じる";
+            // 
+            // VDICloseWindows_checkBox
+            // 
+            VDICloseWindows_checkBox.AutoSize = true;
+            VDICloseWindows_checkBox.Location = new Point(9, 270);
+            VDICloseWindows_checkBox.Name = "VDICloseWindows_checkBox";
+            VDICloseWindows_checkBox.Size = new Size(62, 19);
+            VDICloseWindows_checkBox.TabIndex = 10;
+            VDICloseWindows_checkBox.Text = "有効化";
+            VDICloseWindows_checkBox.UseVisualStyleBackColor = true;
+            // 
+            // VDIAutoLaunch_label
+            // 
+            VDIAutoLaunch_label.AutoSize = true;
+            VDIAutoLaunch_label.Location = new Point(3, 41);
+            VDIAutoLaunch_label.Name = "VDIAutoLaunch_label";
+            VDIAutoLaunch_label.Size = new Size(191, 15);
+            VDIAutoLaunch_label.TabIndex = 8;
+            VDIAutoLaunch_label.Text = "写真撮影時にVDIビューワーを自動起動";
+            VDIAutoLaunch_label.Click += VDIAutoLaunch_label_Click;
+            // 
+            // VDIAutoLaunch_checkBox
+            // 
+            VDIAutoLaunch_checkBox.AutoSize = true;
+            VDIAutoLaunch_checkBox.Location = new Point(3, 59);
+            VDIAutoLaunch_checkBox.Name = "VDIAutoLaunch_checkBox";
+            VDIAutoLaunch_checkBox.Size = new Size(119, 19);
+            VDIAutoLaunch_checkBox.TabIndex = 7;
+            VDIAutoLaunch_checkBox.Text = "自動起動を有効化";
+            VDIAutoLaunch_checkBox.UseVisualStyleBackColor = true;
+            VDIAutoLaunch_checkBox.CheckedChanged += VDIAutoLaunch_checkBox_CheckedChanged;
+            // 
+            // VDIWindowSize_groupBox
+            // 
+            VDIWindowSize_groupBox.Controls.Add(VDIWindowCalc_groupBox);
+            VDIWindowSize_groupBox.Controls.Add(VDIWindowSizeDefault_radioButton);
+            VDIWindowSize_groupBox.Controls.Add(VDIWindowSizeCustom_radioButton);
+            VDIWindowSize_groupBox.Controls.Add(VDIWindowSizeFullScreen_radioButton);
+            VDIWindowSize_groupBox.Location = new Point(3, 84);
+            VDIWindowSize_groupBox.Name = "VDIWindowSize_groupBox";
+            VDIWindowSize_groupBox.Size = new Size(374, 158);
+            VDIWindowSize_groupBox.TabIndex = 9;
+            VDIWindowSize_groupBox.TabStop = false;
+            VDIWindowSize_groupBox.Text = "起動するウィンドウサイズ設定";
+            // 
+            // VDIWindowCalc_groupBox
+            // 
+            VDIWindowCalc_groupBox.Controls.Add(VDIWindowCalcWidth_textBox);
+            VDIWindowCalc_groupBox.Controls.Add(VDIWindowSizeCustom_comboBox);
+            VDIWindowCalc_groupBox.Controls.Add(VDIWindowCalcHeight_textBox);
+            VDIWindowCalc_groupBox.Controls.Add(VDIWindowMulti_label);
+            VDIWindowCalc_groupBox.Controls.Add(label7);
+            VDIWindowCalc_groupBox.Controls.Add(VDIWindowCalcAdd_button);
+            VDIWindowCalc_groupBox.Controls.Add(label4);
+            VDIWindowCalc_groupBox.Location = new Point(6, 48);
+            VDIWindowCalc_groupBox.Name = "VDIWindowCalc_groupBox";
+            VDIWindowCalc_groupBox.Size = new Size(362, 100);
+            VDIWindowCalc_groupBox.TabIndex = 14;
+            VDIWindowCalc_groupBox.TabStop = false;
+            VDIWindowCalc_groupBox.Text = "ウィンドウサイズの計算";
+            // 
+            // VDIWindowCalcWidth_textBox
+            // 
+            VDIWindowCalcWidth_textBox.Location = new Point(167, 34);
+            VDIWindowCalcWidth_textBox.Name = "VDIWindowCalcWidth_textBox";
+            VDIWindowCalcWidth_textBox.Size = new Size(100, 23);
+            VDIWindowCalcWidth_textBox.TabIndex = 13;
+            // 
+            // VDIWindowSizeCustom_comboBox
+            // 
+            VDIWindowSizeCustom_comboBox.DropDownStyle = ComboBoxStyle.DropDownList;
+            VDIWindowSizeCustom_comboBox.FormattingEnabled = true;
+            VDIWindowSizeCustom_comboBox.Location = new Point(6, 63);
+            VDIWindowSizeCustom_comboBox.Name = "VDIWindowSizeCustom_comboBox";
+            VDIWindowSizeCustom_comboBox.Size = new Size(353, 23);
+            VDIWindowSizeCustom_comboBox.TabIndex = 3;
+            VDIWindowSizeCustom_comboBox.Text = "ウィンドウサイズを選択";
+            // 
+            // VDIWindowCalcHeight_textBox
+            // 
+            VDIWindowCalcHeight_textBox.Location = new Point(6, 34);
+            VDIWindowCalcHeight_textBox.Name = "VDIWindowCalcHeight_textBox";
+            VDIWindowCalcHeight_textBox.Size = new Size(100, 23);
+            VDIWindowCalcHeight_textBox.TabIndex = 12;
+            // 
+            // VDIWindowMulti_label
+            // 
+            VDIWindowMulti_label.AutoSize = true;
+            VDIWindowMulti_label.Location = new Point(129, 38);
+            VDIWindowMulti_label.Name = "VDIWindowMulti_label";
+            VDIWindowMulti_label.Size = new Size(15, 15);
+            VDIWindowMulti_label.TabIndex = 8;
+            VDIWindowMulti_label.Text = "×";
+            VDIWindowMulti_label.Click += label7_Click;
+            // 
+            // label7
+            // 
+            label7.AutoSize = true;
+            label7.Location = new Point(205, 16);
+            label7.Name = "label7";
+            label7.Size = new Size(19, 15);
+            label7.TabIndex = 11;
+            label7.Text = "横";
+            // 
+            // VDIWindowCalcAdd_button
+            // 
+            VDIWindowCalcAdd_button.Location = new Point(281, 34);
+            VDIWindowCalcAdd_button.Name = "VDIWindowCalcAdd_button";
+            VDIWindowCalcAdd_button.Size = new Size(75, 23);
+            VDIWindowCalcAdd_button.TabIndex = 9;
+            VDIWindowCalcAdd_button.Text = "解像度追加";
+            VDIWindowCalcAdd_button.UseVisualStyleBackColor = true;
+            // 
+            // label4
+            // 
+            label4.AutoSize = true;
+            label4.Location = new Point(47, 16);
+            label4.Name = "label4";
+            label4.Size = new Size(19, 15);
+            label4.TabIndex = 10;
+            label4.Text = "縦";
+            // 
+            // VDIWindowSizeDefault_radioButton
+            // 
+            VDIWindowSizeDefault_radioButton.AutoSize = true;
+            VDIWindowSizeDefault_radioButton.Location = new Point(103, 22);
+            VDIWindowSizeDefault_radioButton.Name = "VDIWindowSizeDefault_radioButton";
+            VDIWindowSizeDefault_radioButton.Size = new Size(128, 19);
+            VDIWindowSizeDefault_radioButton.TabIndex = 2;
+            VDIWindowSizeDefault_radioButton.TabStop = true;
+            VDIWindowSizeDefault_radioButton.Text = "フルスクリーンウィンドウ";
+            VDIWindowSizeDefault_radioButton.UseVisualStyleBackColor = true;
+            VDIWindowSizeDefault_radioButton.CheckedChanged += VDIModelDefault_radioButton_CheckedChanged;
+            // 
+            // VDIWindowSizeCustom_radioButton
+            // 
+            VDIWindowSizeCustom_radioButton.AutoSize = true;
+            VDIWindowSizeCustom_radioButton.CheckAlign = ContentAlignment.TopLeft;
+            VDIWindowSizeCustom_radioButton.Location = new Point(234, 22);
+            VDIWindowSizeCustom_radioButton.Name = "VDIWindowSizeCustom_radioButton";
+            VDIWindowSizeCustom_radioButton.Size = new Size(131, 19);
+            VDIWindowSizeCustom_radioButton.TabIndex = 1;
+            VDIWindowSizeCustom_radioButton.TabStop = true;
+            VDIWindowSizeCustom_radioButton.Text = "カスタムウィンドウサイズ";
+            VDIWindowSizeCustom_radioButton.UseVisualStyleBackColor = true;
+            // 
+            // VDIWindowSizeFullScreen_radioButton
+            // 
+            VDIWindowSizeFullScreen_radioButton.AutoSize = true;
+            VDIWindowSizeFullScreen_radioButton.Location = new Point(6, 22);
+            VDIWindowSizeFullScreen_radioButton.Name = "VDIWindowSizeFullScreen_radioButton";
+            VDIWindowSizeFullScreen_radioButton.Size = new Size(96, 19);
+            VDIWindowSizeFullScreen_radioButton.TabIndex = 0;
+            VDIWindowSizeFullScreen_radioButton.TabStop = true;
+            VDIWindowSizeFullScreen_radioButton.Text = "デフォルトサイズ";
+            VDIWindowSizeFullScreen_radioButton.UseVisualStyleBackColor = true;
+            // 
             // LICENSE
             // 
             LICENSE.Controls.Add(devMode_label);
@@ -991,14 +1253,6 @@
             dev_MetadataStatus.Text = "【開発】メタデータ";
             dev_MetadataStatus.UseVisualStyleBackColor = true;
             // 
-            // dev_Metadata_richTextBox
-            // 
-            dev_Metadata_richTextBox.Location = new Point(8, 31);
-            dev_Metadata_richTextBox.Name = "dev_Metadata_richTextBox";
-            dev_Metadata_richTextBox.Size = new Size(360, 239);
-            dev_Metadata_richTextBox.TabIndex = 0;
-            dev_Metadata_richTextBox.Text = "";
-            // 
             // dev_Metadata_label
             // 
             dev_Metadata_label.AutoSize = true;
@@ -1008,6 +1262,14 @@
             dev_Metadata_label.Size = new Size(115, 21);
             dev_Metadata_label.TabIndex = 1;
             dev_Metadata_label.Text = "現在のメタデータ";
+            // 
+            // dev_Metadata_richTextBox
+            // 
+            dev_Metadata_richTextBox.Location = new Point(8, 31);
+            dev_Metadata_richTextBox.Name = "dev_Metadata_richTextBox";
+            dev_Metadata_richTextBox.Size = new Size(360, 239);
+            dev_Metadata_richTextBox.TabIndex = 0;
+            dev_Metadata_richTextBox.Text = "";
             // 
             // VSA_launcher
             // 
@@ -1040,6 +1302,14 @@
             Integral_groupBox.PerformLayout();
             VirtualLens2_groupBox.ResumeLayout(false);
             VirtualLens2_groupBox.PerformLayout();
+            VDI.ResumeLayout(false);
+            VDI.PerformLayout();
+            VDIInstall_panel.ResumeLayout(false);
+            VDIInstall_panel.PerformLayout();
+            VDIWindowSize_groupBox.ResumeLayout(false);
+            VDIWindowSize_groupBox.PerformLayout();
+            VDIWindowCalc_groupBox.ResumeLayout(false);
+            VDIWindowCalc_groupBox.PerformLayout();
             LICENSE.ResumeLayout(false);
             LICENSE.PerformLayout();
             dev_OSCStatus.ResumeLayout(false);
@@ -1147,5 +1417,30 @@
     private TabPage dev_MetadataStatus;
         private Label dev_Metadata_label;
         private RichTextBox dev_Metadata_richTextBox;
+        private TabPage VDI;
+        private Button VDIInstall_button;
+        private Label VDIInstall_label;
+        private Label VDIRepository_label;
+        private CheckBox VDIAutoLaunch_checkBox;
+        private Label VDIAutoLaunch_label;
+        private GroupBox VDIWindowSize_groupBox;
+        private RadioButton VDIWindowSizeFullScreen_radioButton;
+        private RadioButton VDIWindowSizeDefault_radioButton;
+        private RadioButton VDIWindowSizeCustom_radioButton;
+        private ComboBox VDIWindowSizeCustom_comboBox;
+        private Label label6;
+        private Label VDIWindowCalc_label;
+        private RichTextBox richTextBox;
+        private RichTextBox VDIWindowCalcWidth_richTextBox;
+        private Label VDIWindowMulti_label;
+        private Button VDIWindowCalcAdd_button;
+        private TextBox VDIWindowCalcWidth_textBox;
+        private TextBox VDIWindowCalcHeight_textBox;
+        private Label label7;
+        private Label label4;
+        private GroupBox VDIWindowCalc_groupBox;
+        private CheckBox VDICloseWindows_checkBox;
+        private Panel VDIInstall_panel;
+        private LinkLabel GithubRepository_LinkLabel;
     }
 }
