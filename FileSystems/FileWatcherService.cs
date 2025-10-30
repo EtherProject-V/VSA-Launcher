@@ -27,8 +27,10 @@ namespace VSA_launcher
 
         // VRChatログ解析
         private readonly VRChatLogParser _logParser;
-        
-        
+
+        // VDI起動管理
+        private VdiLauncher? _vdiLauncher;
+
         // 統計情報
         public int DetectedFilesCount { get; private set; } = 0;
         public int ProcessedFilesCount { get; private set; } = 0;
@@ -55,10 +57,13 @@ namespace VSA_launcher
         {
             // 設定を読み込み
             _settings = SettingsManager.LoadSettings();
-            
+
             // VRChatログ解析機能を初期化
             _logParser = new VRChatLogParser();
-            
+
+            // VDI起動管理を初期化
+            _vdiLauncher = new VdiLauncher(_settings);
+
             // 初回のログ解析を実行
             Task.Run(() => _logParser.ParseLatestLog());
         }
@@ -420,13 +425,34 @@ namespace VSA_launcher
                 
                 // ファイル検出イベント発火
                 RaiseFileDetected(filePath);
-                
+
+                // VDI自動起動（設定が有効な場合）
+                if (_settings.VdiSettings?.AutoLaunchOnCapture == true && _vdiLauncher != null)
+                {
+                    try
+                    {
+                        bool launched = _vdiLauncher.LaunchVdi(filePath);
+                        if (launched)
+                        {
+                            RaiseStatusChanged($"VDI起動: {Path.GetFileName(filePath)}");
+                        }
+                        else
+                        {
+                            RaiseStatusChanged("VDI起動失敗: VDIがインストールされていません");
+                        }
+                    }
+                    catch (Exception vdiEx)
+                    {
+                        RaiseStatusChanged($"VDI起動エラー: {vdiEx.Message}");
+                    }
+                }
+
                 // 出力先パスを計算
                 string destinationPath = GetTargetPath(filePath);
-                
+
                 // メタデータ付きのファイル処理
                 ProcessFile(filePath, destinationPath);
-                
+
                 ProcessedFilesCount++;
                 RaiseStatusChanged($"処理完了: {Path.GetFileName(destinationPath)}");
             }

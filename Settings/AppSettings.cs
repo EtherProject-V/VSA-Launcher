@@ -15,6 +15,7 @@ namespace VSA_launcher
         public Performance Performance { get; set; } = new Performance();
         public LauncherSettings LauncherSettings { get; set; } = new LauncherSettings();
         public CameraSettings CameraSettings { get; set; } = new CameraSettings();
+        public VdiSettings VdiSettings { get; set; } = new VdiSettings();
     }
 
     public class FolderStructureSettings
@@ -243,5 +244,16 @@ namespace VSA_launcher
         public int Exposure { get; set; } = 50;
         public int ShutterSpeed { get; set; } = 50;
         public int BokehShape { get; set; } = 50;
+    }
+
+    public class VdiSettings
+    {
+        public bool AutoLaunchOnCapture { get; set; } = false;
+        public string DefaultWindowMode { get; set; } = "FullScreen";
+        public string CustomResolution { get; set; } = "1920x1080";
+        public bool CloseOtherWindows { get; set; } = true;
+        public string VdiExecutablePath { get; set; } = string.Empty;
+        public string LastInstalledVersion { get; set; } = string.Empty;
+        public DateTime? LastCheckedDate { get; set; } = null;
     }
 }
