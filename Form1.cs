@@ -696,12 +696,17 @@ namespace VSA_launcher
             string baseDir = AppDomain.CurrentDomain.BaseDirectory;
             string[] searchPaths = new string[]
             {
-                // リリースビルド（同じ階層）
+                // リリースビルド（同じ階層）- 大文字版
                 Path.Combine(baseDir, "..", "VSA-MainApp", "VSA-MainApp.exe"),
-                // 開発環境
+                // リリースビルド（同じ階層）- 小文字版（現在のディレクトリ名）
+                Path.Combine(baseDir, "..", "vsa-mainapp", "vsa-mainapp.exe"),
+                // 開発環境 - 大文字版
                 Path.Combine(baseDir, "..", "..", "VSA-MainApp", "src-tauri", "target", "release", "VSA-MainApp.exe"),
+                // 開発環境 - 小文字版（現在のディレクトリ名）
+                Path.Combine(baseDir, "..", "..", "vsa-mainapp", "src-tauri", "target", "release", "vsa-mainapp.exe"),
                 // 同じディレクトリ
-                Path.Combine(baseDir, "VSA-MainApp.exe")
+                Path.Combine(baseDir, "VSA-MainApp.exe"),
+                Path.Combine(baseDir, "vsa-mainapp.exe")
             };
 
             foreach (var path in searchPaths)
@@ -713,7 +718,7 @@ namespace VSA_launcher
                 }
             }
 
-            throw new FileNotFoundException("VSA-MainApp.exeが見つかりません。以下のパスを確認してください:\n" +
+            throw new FileNotFoundException("VSA-MainApp.exeまたはvsa-mainapp.exeが見つかりません。以下のパスを確認してください:\n" +
                 string.Join("\n", searchPaths.Select(p => Path.GetFullPath(p))));
         }
 
