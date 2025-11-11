@@ -8,17 +8,13 @@ namespace VSA_launcher
     {
         private static readonly string SettingsFileName = "appsettings.json";
 
-        // 設定ファイルの保存場所を AppData に変更（管理者権限不要、Windows標準）
+        // 設定ファイルの保存場所（管理者権限不要、Windows標準）
         private static readonly string SettingsDirectory = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
             "VSA", "launcher");
 
         private static readonly string SettingsFilePath = Path.Combine(
             SettingsDirectory, SettingsFileName);
-
-        // 旧バージョンとの互換性のため、旧設定ファイルパス
-        private static readonly string LegacySettingsFilePath = Path.Combine(
-            AppDomain.CurrentDomain.BaseDirectory, SettingsFileName);
 
         public static AppSettings LoadSettings()
         {
@@ -32,24 +28,10 @@ namespace VSA_launcher
                     Directory.CreateDirectory(SettingsDirectory);
                 }
 
-                // 新しい設定ファイルパスで読み込み
                 if (File.Exists(SettingsFilePath))
                 {
                     string json = File.ReadAllText(SettingsFilePath);
                     settings = JsonConvert.DeserializeObject<AppSettings>(json) ?? new AppSettings();
-                }
-                // 旧バージョンの設定ファイルから移行
-                else if (File.Exists(LegacySettingsFilePath))
-                {
-                    Console.WriteLine($"旧設定ファイルを検出しました。新しい場所に移行します: {SettingsFilePath}");
-                    string json = File.ReadAllText(LegacySettingsFilePath);
-                    settings = JsonConvert.DeserializeObject<AppSettings>(json) ?? new AppSettings();
-
-                    // 新しい場所に保存
-                    SaveSettings(settings);
-
-                    // 旧設定ファイルをバックアップとして残す（削除しない）
-                    Console.WriteLine("設定ファイルの移行が完了しました。");
                 }
                 else
                 {
