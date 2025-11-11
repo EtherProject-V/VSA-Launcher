@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using VSA_launcher.OSCServer;
+using Newtonsoft.Json;
 
 namespace VSA_launcher.VRC_Game
 {
@@ -19,6 +20,7 @@ namespace VSA_launcher.VRC_Game
         private readonly OSCParameterSender _oscParameterSender;
         private readonly Action<string, string> _updateStatusAction;
         private readonly Action _startOscServicesAction; // 追加: サーバー起動コールバック
+        private readonly WebSocket.WebSocketServerManager? _webSocketManager; // WebSocket管理
 
         private System.Threading.Timer? _processMonitorTimer;
         private System.Threading.Timer? _roomJoinCheckTimer;
@@ -29,16 +31,18 @@ namespace VSA_launcher.VRC_Game
         private DateTime _lastRoomJoinTime = DateTime.MinValue;
 
         public VRChatInitializationManager(
-            VRChatLogParser logParser, 
+            VRChatLogParser logParser,
             OSCParameterSender oscParameterSender,
             Action<string, string> updateStatusAction,
-            Action startOscServicesAction)
+            Action startOscServicesAction,
+            WebSocket.WebSocketServerManager? wsManager = null)
         {
             _logParser = logParser ?? throw new ArgumentNullException(nameof(logParser));
             _oscParameterSender = oscParameterSender ?? throw new ArgumentNullException(nameof(oscParameterSender));
             _updateStatusAction = updateStatusAction ?? throw new ArgumentNullException(nameof(updateStatusAction));
             _startOscServicesAction = startOscServicesAction ?? throw new ArgumentNullException(nameof(startOscServicesAction));
-            
+            _webSocketManager = wsManager;
+
             _cancellationTokenSource = new CancellationTokenSource();
         }
 
@@ -145,12 +149,15 @@ namespace VSA_launcher.VRC_Game
             try
             {
                 bool currentVRChatStatus = IsVRChatRunning();
-                
+
                 if (currentVRChatStatus != _isVRChatRunning)
                 {
                     _isVRChatRunning = currentVRChatStatus;
                     Console.WriteLine($"[初期化マネージャー] VRChat状態変更: {(_isVRChatRunning ? "起動" : "停止")}");
-                    
+
+                    // WebSocket通知を送信
+                    OnVRChatStatusChanged(_isVRChatRunning);
+
                     if (_isVRChatRunning)
                     {
                         // VRChat新規起動検知 - ルーム参加監視を開始
@@ -167,6 +174,29 @@ namespace VSA_launcher.VRC_Game
             catch (Exception ex)
             {
                 Console.WriteLine($"[初期化マネージャー] プロセス監視エラー: {ex.Message}");
+            }
+        }
+
+        private void OnVRChatStatusChanged(bool isRunning)
+        {
+            SendVRChatStatus(isRunning);
+        }
+
+        private void SendVRChatStatus(bool isRunning)
+        {
+            if (_webSocketManager?.IsRunning == true)
+            {
+                var message = new WebSocket.WebSocketMessage
+                {
+                    Type = "vrchat_status",
+                    Timestamp = DateTime.UtcNow,
+                    Data = new WebSocket.VRChatStatusData { IsRunning = isRunning }
+                };
+
+                string json = JsonConvert.SerializeObject(message);
+                _webSocketManager.SendMessage(json);
+
+                Console.WriteLine($"VRChat状態送信: {(isRunning ? "起動中" : "終了")}");
             }
         }
 

@@ -74,6 +74,10 @@ namespace VSA_launcher
         private const int VDI_CHECK_INTERVAL = 10000; // 10秒
         private const int VDI_CHECK_MAX_COUNT = 18; // 3分間(10秒 × 18回)
 
+        // WebSocket関連
+        private WebSocket.WebSocketServerManager? _webSocketManager;
+        private bool _isUpdatingFromWebSocket = false; // WebSocketからの更新フラグ
+
         public VSA_launcher()
         {
             try
@@ -197,6 +201,12 @@ namespace VSA_launcher
                 _vrchatMonitorTimer.Tick += VRChatMonitorTimer_Tick;
                 _vrchatMonitorTimer.Start();
 
+                // WebSocket初期化（VRChatInitializationManagerより前に実行）
+                InitializeWebSocket();
+
+                // FileWatcherServiceにWebSocketManagerを設定
+                _fileWatcher.SetWebSocketManager(_webSocketManager);
+
                 if (_oscParameterSender != null)
                 {
                     _vrchatInitializationManager = new VRC_Game.VRChatInitializationManager(
@@ -210,7 +220,8 @@ namespace VSA_launcher
                             {
                                 StartOscServices();
                             }
-                        }
+                        },
+                        _webSocketManager // WebSocketManagerを渡す
                     );
                     _vrchatInitializationManager.Start();
                     Console.WriteLine("[Form1] VRChat初期化マネージャーを開始しました");
@@ -535,8 +546,36 @@ namespace VSA_launcher
 
         private void monthCompression_CheckedChanged(object? sender, EventArgs e)
         {
+            if (_isUpdatingFromWebSocket) return; // WebSocketからの更新時はスキップ
+
             _settings.Compression.AutoCompress = monthCompression_checkBox.Checked;
             SettingsManager.SaveSettings(_settings);
+
+            // WebSocketで送信
+            SendCompressionSettings();
+        }
+
+        private void SendCompressionSettings()
+        {
+            if (_webSocketManager?.IsRunning == true)
+            {
+                var message = new WebSocket.WebSocketMessage
+                {
+                    Type = "compression_settings",
+                    Timestamp = DateTime.UtcNow,
+                    Data = new WebSocket.CompressionSettingsData
+                    {
+                        AutoCompress = _settings.Compression.AutoCompress,
+                        CompressionLevel = _settings.Compression.CompressionLevel,
+                        OriginalFileHandling = _settings.Compression.OriginalFileHandling
+                    }
+                };
+
+                string json = Newtonsoft.Json.JsonConvert.SerializeObject(message);
+                _webSocketManager.SendMessage(json);
+
+                Console.WriteLine("圧縮設定送信");
+            }
         }
 
         private void radioButton_CheckedChanged(object? sender, EventArgs e)
@@ -597,14 +636,198 @@ namespace VSA_launcher
         // publicに変更してSystemTrayIconからアクセスできるようにする
         public void LaunchMainApplication()
         {
-            MessageBox.Show(
-                "現在メインアプリは開発中です。完成をお待ちください。\n\n" +
-                "最新情報は下記のURLからご確認ください：\n" +
-                "Booth: https://fefaether-vrc.booth.pm/\n" +
-                "Twitter(X): https://x.com/fefaethervrc",
-                "お知らせ",
-                MessageBoxButtons.OK,
-                MessageBoxIcon.Information);
+            // 1. 既存インスタンスチェック
+            if (IsMainAppRunning())
+            {
+                MessageBox.Show("MainAppは既に起動しています。", "情報",
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            // 2. WebSocketサーバー起動確認
+            if (_webSocketManager == null || !_webSocketManager.IsRunning)
+            {
+                MessageBox.Show("WebSocketサーバーが起動していません。", "エラー",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
+            // 3. MainApp実行ファイル探索
+            string mainAppPath;
+            try
+            {
+                mainAppPath = FindMainAppExecutable();
+            }
+            catch (FileNotFoundException ex)
+            {
+                MessageBox.Show($"MainAppが見つかりません:\n{ex.Message}", "エラー",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
+            // 4. プロセス起動
+            try
+            {
+                int wsPort = _webSocketManager.Port;
+                ProcessStartInfo startInfo = new ProcessStartInfo
+                {
+                    FileName = mainAppPath,
+                    Arguments = $"--ws-port {wsPort}",
+                    UseShellExecute = true,
+                    CreateNoWindow = false,
+                    WorkingDirectory = Path.GetDirectoryName(mainAppPath)
+                };
+
+                Process.Start(startInfo);
+                LogMainAppLaunch(mainAppPath, wsPort);
+
+                MessageBox.Show($"MainAppを起動しました。\nWebSocketポート: {wsPort}", "成功",
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"MainApp起動エラー:\n{ex.Message}", "エラー",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private string FindMainAppExecutable()
+        {
+            string baseDir = AppDomain.CurrentDomain.BaseDirectory;
+            string[] searchPaths = new string[]
+            {
+                // リリースビルド（同じ階層）
+                Path.Combine(baseDir, "..", "VSA-MainApp", "VSA-MainApp.exe"),
+                // 開発環境
+                Path.Combine(baseDir, "..", "..", "VSA-MainApp", "src-tauri", "target", "release", "VSA-MainApp.exe"),
+                // 同じディレクトリ
+                Path.Combine(baseDir, "VSA-MainApp.exe")
+            };
+
+            foreach (var path in searchPaths)
+            {
+                string fullPath = Path.GetFullPath(path);
+                if (File.Exists(fullPath))
+                {
+                    return fullPath;
+                }
+            }
+
+            throw new FileNotFoundException("VSA-MainApp.exeが見つかりません。以下のパスを確認してください:\n" +
+                string.Join("\n", searchPaths.Select(p => Path.GetFullPath(p))));
+        }
+
+        private void LogMainAppLaunch(string path, int port)
+        {
+            try
+            {
+                string logDir = Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                    "SnapArchiveKai");
+
+                if (!Directory.Exists(logDir))
+                {
+                    Directory.CreateDirectory(logDir);
+                }
+
+                string logPath = Path.Combine(logDir, "mainapp_launch.log");
+                string logEntry = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] Launched: {path} --ws-port {port}\n";
+
+                File.AppendAllText(logPath, logEntry);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"ログ記録エラー: {ex.Message}");
+            }
+        }
+
+        private void InitializeWebSocket()
+        {
+            try
+            {
+                _webSocketManager = new WebSocket.WebSocketServerManager();
+                _webSocketManager.MessageReceived += OnWebSocketMessageReceived;
+                _webSocketManager.ClientConnectionChanged += OnClientConnectionChanged;
+
+                if (_settings.WebSocket.Enabled)
+                {
+                    _webSocketManager.Start(_settings.WebSocket.StartPort, _settings.WebSocket.MaxPortAttempts);
+                    UpdateWebSocketStatus(false); // 初期状態は未接続
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"WebSocketサーバー起動エラー:\n{ex.Message}", "エラー",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void OnClientConnectionChanged(object? sender, bool isConnected)
+        {
+            if (InvokeRequired)
+            {
+                Invoke(new Action<object?, bool>(OnClientConnectionChanged), sender, isConnected);
+                return;
+            }
+
+            UpdateWebSocketStatus(isConnected);
+        }
+
+        private void UpdateWebSocketStatus(bool isConnected)
+        {
+            // WebSocket状態をコンソールに出力
+            Console.WriteLine($"WebSocket状態: {(isConnected ? "接続中" : "切断中")}");
+        }
+
+        private void OnWebSocketMessageReceived(object? sender, string message)
+        {
+            try
+            {
+                var wsMessage = Newtonsoft.Json.JsonConvert.DeserializeObject<WebSocket.WebSocketMessage>(message);
+                if (wsMessage == null) return;
+
+                if (wsMessage.Type == "compression_settings_update")
+                {
+                    var dataJson = Newtonsoft.Json.JsonConvert.SerializeObject(wsMessage.Data);
+                    var data = Newtonsoft.Json.JsonConvert.DeserializeObject<WebSocket.CompressionSettingsData>(dataJson);
+
+                    if (data != null)
+                    {
+                        UpdateCompressionSettingsFromWebSocket(data);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"WebSocketメッセージ処理エラー: {ex.Message}");
+            }
+        }
+
+        private void UpdateCompressionSettingsFromWebSocket(WebSocket.CompressionSettingsData data)
+        {
+            if (InvokeRequired)
+            {
+                Invoke(new Action<WebSocket.CompressionSettingsData>(UpdateCompressionSettingsFromWebSocket), data);
+                return;
+            }
+
+            _isUpdatingFromWebSocket = true;
+
+            try
+            {
+                monthCompression_checkBox.Checked = data.AutoCompress;
+                _settings.Compression.AutoCompress = data.AutoCompress;
+                _settings.Compression.CompressionLevel = data.CompressionLevel;
+                _settings.Compression.OriginalFileHandling = data.OriginalFileHandling;
+
+                SettingsManager.SaveSettings(_settings);
+
+                Console.WriteLine("圧縮設定更新（WebSocketから）");
+            }
+            finally
+            {
+                _isUpdatingFromWebSocket = false;
+            }
         }
 
         /// <summary>
@@ -2605,6 +2828,11 @@ namespace VSA_launcher
         }
 
         private void VDIInstall_label_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void monthCompression_checkBox_CheckedChanged(object sender, EventArgs e)
         {
 
         }

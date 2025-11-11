@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using System.Text.RegularExpressions;
 using System.Collections.Generic;
 using System.Linq;
+using Newtonsoft.Json;
 
 namespace VSA_launcher
 {
@@ -31,6 +32,9 @@ namespace VSA_launcher
         // VDI起動管理
         private VdiLauncher? _vdiLauncher;
 
+        // WebSocket管理
+        private WebSocket.WebSocketServerManager? _webSocketManager;
+
         // 統計情報
         public int DetectedFilesCount { get; private set; } = 0;
         public int ProcessedFilesCount { get; private set; } = 0;
@@ -53,7 +57,7 @@ namespace VSA_launcher
         /// <summary>
         /// コンストラクタ - 設定を読み込み、ログ解析機能を初期化
         /// </summary>
-        public FileWatcherService()
+        public FileWatcherService(WebSocket.WebSocketServerManager? wsManager = null)
         {
             // 設定を読み込み
             _settings = SettingsManager.LoadSettings();
@@ -64,8 +68,19 @@ namespace VSA_launcher
             // VDI起動管理を初期化
             _vdiLauncher = new VdiLauncher(_settings);
 
+            // WebSocket管理を設定
+            _webSocketManager = wsManager;
+
             // 初回のログ解析を実行
             Task.Run(() => _logParser.ParseLatestLog());
+        }
+
+        /// <summary>
+        /// WebSocketManagerを設定
+        /// </summary>
+        public void SetWebSocketManager(WebSocket.WebSocketServerManager? wsManager)
+        {
+            _webSocketManager = wsManager;
         }
         
         /// <summary>
@@ -734,6 +749,40 @@ namespace VSA_launcher
         private void RaiseFileDetected(string filePath)
         {
             FileDetected?.Invoke(this, new FileDetectedEventArgs(filePath));
+
+            // WebSocket通知を送信
+            SendPhotoDetected(filePath);
+        }
+
+        private void SendPhotoDetected(string filePath)
+        {
+            if (_webSocketManager?.IsRunning == true)
+            {
+                // メタデータを取得
+                var metadata = new Dictionary<string, string>
+                {
+                    { "WorldName", _logParser.CurrentWorldName },
+                    { "WorldID", _logParser.CurrentWorldId }
+                };
+
+                var message = new WebSocket.WebSocketMessage
+                {
+                    Type = "photo_detected",
+                    Timestamp = DateTime.UtcNow,
+                    Data = new WebSocket.PhotoDetectedData
+                    {
+                        FilePath = filePath,
+                        Metadata = metadata,
+                        WorldName = _logParser.CurrentWorldName,
+                        CaptureTime = DateTime.Now
+                    }
+                };
+
+                string json = JsonConvert.SerializeObject(message);
+                _webSocketManager.SendMessage(json);
+
+                Console.WriteLine($"PNG検出送信: {Path.GetFileName(filePath)}");
+            }
         }
 
         private void RaiseStatusChanged(string message)

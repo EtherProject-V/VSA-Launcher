@@ -16,6 +16,7 @@ namespace VSA_launcher
         public LauncherSettings LauncherSettings { get; set; } = new LauncherSettings();
         public CameraSettings CameraSettings { get; set; } = new CameraSettings();
         public VdiSettings VdiSettings { get; set; } = new VdiSettings();
+        public WebSocketSettings WebSocket { get; set; } = new WebSocketSettings();
     }
 
     public class FolderStructureSettings
@@ -255,5 +256,12 @@ namespace VSA_launcher
         public string VdiExecutablePath { get; set; } = string.Empty;
         public string LastInstalledVersion { get; set; } = string.Empty;
         public DateTime? LastCheckedDate { get; set; } = null;
+    }
+
+    public class WebSocketSettings
+    {
+        public bool Enabled { get; set; } = true;
+        public int StartPort { get; set; } = 28766;
+        public int MaxPortAttempts { get; set; } = 10;
     }
 }

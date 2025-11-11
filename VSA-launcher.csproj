@@ -11,6 +11,7 @@
 
   <ItemGroup>
     <!-- Hjg.Pngcs パッケージ参照を削除 -->
+    <PackageReference Include="Fleck" Version="1.2.0" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageReference Include="Rug.Osc" Version="1.2.5" />
     <PackageReference Include="SixLabors.ImageSharp" Version="3.1.11" />

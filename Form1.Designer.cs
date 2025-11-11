@@ -96,11 +96,11 @@
             VirtualLens2_Aperture_label = new Label();
             CameraSettingApply_button = new Button();
             VDI = new TabPage();
+            VDIInstall_panel = new Panel();
             VDIInstall_label = new Label();
+            GithubRepository_LinkLabel = new LinkLabel();
             VDIInstall_button = new Button();
             VDIRepository_label = new Label();
-            VDIInstall_panel = new Panel();
-            GithubRepository_LinkLabel = new LinkLabel();
             label6 = new Label();
             VDICloseWindows_checkBox = new CheckBox();
             VDIAutoLaunch_label = new Label();
@@ -306,6 +306,7 @@
             monthCompression_checkBox.TabIndex = 10;
             monthCompression_checkBox.Text = "月ごとの圧縮をONにする";
             monthCompression_checkBox.UseVisualStyleBackColor = true;
+            monthCompression_checkBox.CheckedChanged += monthCompression_checkBox_CheckedChanged;
             // 
             // fileSubdivision_checkBox
             // 
@@ -896,6 +897,17 @@
             VDI.Text = "VDI設定";
             VDI.UseVisualStyleBackColor = true;
             // 
+            // VDIInstall_panel
+            // 
+            VDIInstall_panel.Controls.Add(VDIInstall_label);
+            VDIInstall_panel.Controls.Add(GithubRepository_LinkLabel);
+            VDIInstall_panel.Controls.Add(VDIInstall_button);
+            VDIInstall_panel.Controls.Add(VDIRepository_label);
+            VDIInstall_panel.Location = new Point(0, 0);
+            VDIInstall_panel.Name = "VDIInstall_panel";
+            VDIInstall_panel.Size = new Size(380, 326);
+            VDIInstall_panel.TabIndex = 12;
+            // 
             // VDIInstall_label
             // 
             VDIInstall_label.Anchor = AnchorStyles.None;
@@ -907,6 +919,17 @@
             VDIInstall_label.Text = "VDIがインストールされていません。下のボタンを押して\r\nインストーラーをダウンロードしてください";
             VDIInstall_label.TextAlign = ContentAlignment.MiddleCenter;
             VDIInstall_label.Click += VDIInstall_label_Click;
+            // 
+            // GithubRepository_LinkLabel
+            // 
+            GithubRepository_LinkLabel.AutoSize = true;
+            GithubRepository_LinkLabel.Location = new Point(124, 245);
+            GithubRepository_LinkLabel.Name = "GithubRepository_LinkLabel";
+            GithubRepository_LinkLabel.Size = new Size(132, 15);
+            GithubRepository_LinkLabel.TabIndex = 0;
+            GithubRepository_LinkLabel.TabStop = true;
+            GithubRepository_LinkLabel.Text = "githubのリポジトリはこちら";
+            GithubRepository_LinkLabel.LinkClicked += GithubRepository_LinkLabel_LinkClicked;
             // 
             // VDIInstall_button
             // 
@@ -927,28 +950,6 @@
             VDIRepository_label.TabIndex = 5;
             VDIRepository_label.Text = "ダウンロードの警告が不安であればgithubにそのままソースコードが載っているので\r\nそちらからインストールしてください";
             VDIRepository_label.TextAlign = ContentAlignment.MiddleCenter;
-            // 
-            // VDIInstall_panel
-            // 
-            VDIInstall_panel.Controls.Add(VDIInstall_label);
-            VDIInstall_panel.Controls.Add(GithubRepository_LinkLabel);
-            VDIInstall_panel.Controls.Add(VDIInstall_button);
-            VDIInstall_panel.Controls.Add(VDIRepository_label);
-            VDIInstall_panel.Location = new Point(0, 0);
-            VDIInstall_panel.Name = "VDIInstall_panel";
-            VDIInstall_panel.Size = new Size(380, 326);
-            VDIInstall_panel.TabIndex = 12;
-            // 
-            // GithubRepository_LinkLabel
-            // 
-            GithubRepository_LinkLabel.AutoSize = true;
-            GithubRepository_LinkLabel.Location = new Point(124, 245);
-            GithubRepository_LinkLabel.Name = "GithubRepository_LinkLabel";
-            GithubRepository_LinkLabel.Size = new Size(132, 15);
-            GithubRepository_LinkLabel.TabIndex = 0;
-            GithubRepository_LinkLabel.TabStop = true;
-            GithubRepository_LinkLabel.Text = "githubのリポジトリはこちら";
-            GithubRepository_LinkLabel.LinkClicked += GithubRepository_LinkLabel_LinkClicked;
             // 
             // label6
             // 
@@ -1034,7 +1035,6 @@
             VDIWindowSizeCustom_comboBox.Name = "VDIWindowSizeCustom_comboBox";
             VDIWindowSizeCustom_comboBox.Size = new Size(353, 23);
             VDIWindowSizeCustom_comboBox.TabIndex = 3;
-            VDIWindowSizeCustom_comboBox.Text = "ウィンドウサイズを選択";
             // 
             // VDIWindowCalcHeight_textBox
             // 
