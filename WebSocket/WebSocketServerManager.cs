@@ -17,6 +17,7 @@ namespace VSA_launcher.WebSocket
 
         public int Port { get; private set; }
         public bool IsRunning { get; private set; }
+        public string? CurrentVRChatStatus { get; set; } // クライアント接続時に返す状態
 
         public event EventHandler<string>? MessageReceived;
         public event EventHandler<bool>? ClientConnectionChanged;
@@ -93,6 +94,21 @@ namespace VSA_launcher.WebSocket
             }
 
             Console.WriteLine($"クライアント接続: {socket.ConnectionInfo.ClientIpAddress}");
+
+            // クライアント接続時に現在のVRChat状態を送信（状態同期）
+            if (!string.IsNullOrEmpty(CurrentVRChatStatus))
+            {
+                try
+                {
+                    socket.Send(CurrentVRChatStatus);
+                    Console.WriteLine("クライアント接続時に状態を送信しました");
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"状態送信エラー: {ex.Message}");
+                }
+            }
+
             ClientConnectionChanged?.Invoke(this, true);
         }
 

@@ -78,7 +78,7 @@ namespace VSA_launcher.VRC_Game
         public void Stop()
         {
             Console.WriteLine("[初期化マネージャー] VRChat初期化監視を停止します");
-            
+
             _processMonitorTimer?.Dispose();
             _roomJoinCheckTimer?.Dispose();
             _cancellationTokenSource?.Cancel();
@@ -194,6 +194,11 @@ namespace VSA_launcher.VRC_Game
                 };
 
                 string json = JsonConvert.SerializeObject(message);
+
+                // WebSocketサーバーの状態を更新（再接続時用）
+                _webSocketManager.CurrentVRChatStatus = json;
+
+                // すべてのクライアントに送信
                 _webSocketManager.SendMessage(json);
 
                 Console.WriteLine($"VRChat状態送信: {(isRunning ? "起動中" : "終了")}");
@@ -234,7 +239,7 @@ namespace VSA_launcher.VRC_Game
 
             Console.WriteLine("[初期化マネージャー] ルーム参加監視を停止します");
             _isWaitingForRoomJoin = false;
-            
+
             _roomJoinCheckTimer?.Dispose();
             _roomJoinCheckTimer = null;
         }
@@ -353,9 +358,9 @@ namespace VSA_launcher.VRC_Game
         private void RestartInitialMonitoring()
         {
             Console.WriteLine("[初期化マネージャー] 初期監視モードに戻ります");
-            
+
             _isWaitingForRoomJoin = false;
-            
+
             // プロセス監視タイマーを10秒間隔に戻す
             _processMonitorTimer?.Dispose();
             _processMonitorTimer = new System.Threading.Timer(
@@ -364,7 +369,7 @@ namespace VSA_launcher.VRC_Game
                 0, // 即座に開始
                 PROCESS_MONITOR_INTERVAL_MS
             );
-            
+
             _updateStatusAction("監視再開", "VRChat起動を監視中...");
         }
 
